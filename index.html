@@ -1,11 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
   <head>
     <meta charset="utf-8">
     <title>XR Atem und Puls</title>
     <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; }
+
+      #pulsanzeige {
+        position: fixed; top: 16px; left: 16px; z-index: 10;
+        background: rgba(255,255,255,0.9); color: #12202A;
+        padding: 6px 14px; border-radius: 14px; font-size: 15px;
+      }
+
+      #bedienleiste {
+        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        z-index: 10; display: flex; gap: 8px;
+      }
+
+      #bedienleiste button {
+        border: 1px solid #ccc; background: #fff; color: #12202A;
+        padding: 8px 18px; border-radius: 16px; font-size: 15px; cursor: pointer;
+      }
+
+      #bedienleiste button.aktiv { background: #2E9E6B; color: #fff; border-color: #2E9E6B; }
+
+      #startbildschirm {
+        position: fixed; inset: 0; z-index: 20;
+        background: #1B2A33; color: #fff;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 10px;
+      }
+
+      #startbildschirm h1 { font-size: 26px; font-weight: 600; margin: 0; }
+      #startbildschirm p  { color: #b8c4cc; margin: 0 0 14px 0; }
+
+      #startbildschirm button {
+        border: none; background: #2E9E6B; color: #fff;
+        padding: 10px 28px; border-radius: 16px; font-size: 16px; cursor: pointer;
+      }
+
+      .versteckt { display: none !important; }
+    </style>
   </head>
+
   <body>
+    <!-- Frame 0: Startbildschirm -->
+    <div id="startbildschirm">
+      <h1>Atem und Puls</h1>
+      <p>Ein Lungenmodell atmet im Rhythmus des simulierten Pulses.</p>
+      <button id="btn-los">Start</button>
+    </div>
+
+    <!-- Overlay -->
+    <div id="pulsanzeige" class="versteckt">– bpm</div>
+
+    <div id="bedienleiste" class="versteckt">
+      <button id="btn-startstopp">Stopp</button>
+      <button id="btn-ruhe" class="aktiv">Ruhe</button>
+      <button id="btn-anspannung">Anspannung</button>
+    </div>
+
+    <!-- Szene -->
     <a-scene>
       <a-assets>
         <a-asset-item id="lunge" src="models/lunge.glb"></a-asset-item>
@@ -20,9 +76,14 @@
       <a-entity id="lungenmodell"
                 gltf-model="#lunge"
                 position="0 1.5 -2"
-                scale="0.5 0.5 0.5"></a-entity>
+                scale="0.5 0.5 0.5"
+                atmung="basis: 0.5"></a-entity>
 
       <a-camera position="0 1.6 0"></a-camera>
     </a-scene>
+
+    <script src="js/simulation.js"></script>
+    <script src="js/atmung.js"></script>
+    <script src="js/ui.js"></script>
   </body>
 </html>
