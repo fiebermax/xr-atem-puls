@@ -89,13 +89,17 @@ function groessterSchritt(werte) {
   pruefe('waehrend des Ladens keine Stoerung', dq.stoerung() === null);
 
   await auf.laden();
+  await new Promise(r => setTimeout(r, 0));   // automatischen Wechsel abwarten
 
   pruefe('beide Quellen registriert',
          Object.keys(dq.quellen).join(',') === 'simulation,aufzeichnung');
-  pruefe('Startquelle ist die Simulation', dq.name === 'simulation');
+  pruefe('nach dem Laden spielt die Aufzeichnung', dq.name === 'aufzeichnung');
   pruefe('nach dem Laden keine Stoerung', dq.stoerung() === null);
+  pruefe('Aufzeichnung meldet sich als nicht steuerbar', dq.steuerbar() === false);
 
   console.log('\n--- Simulation ---');
+  dq.wechseln('simulation');
+  pruefe('Simulation ist steuerbar', dq.steuerbar() === true);
   dq.start();
   fahren(dq, 15);
   pruefe('Ruhe naehert sich 60 bpm', Math.abs(dq.puls - 60) < 4, dq.puls.toFixed(1));

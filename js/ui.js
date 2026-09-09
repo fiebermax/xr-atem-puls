@@ -35,13 +35,15 @@ function zustandAnzeigen() {
     : 'Quelle: ' + (QUELLENNAMEN[datenquelle.name] || datenquelle.name);
 
   elQuelle.classList.toggle('stoerung', gestoert !== null);
+}
 
-  // Bei Wiedergabe aus der Datei steht der Verlauf fest. Ruhe und Anspannung
-  // sind dann ohne Funktion und werden zur reinen Zustandsanzeige: die
-  // aktiv-Markierung laeuft weiter und zeigt, in welcher Phase die Datei ist.
-  const steuerbar = datenquelle.name === 'simulation';
-  elRuhe.disabled       = !steuerbar;
-  elAnspannung.disabled = !steuerbar;
+// Ruhe und Anspannung. Laeuft gerade die Aufzeichnung, reagiert die nicht auf
+// setzeZustand - dann wird zuerst auf die steuerbare Quelle gewechselt. Wer
+// Anspannung drueckt, will Anspannung sehen und nicht einen toten Button.
+function zustandAnfordern(zustand) {
+  if (!datenquelle.steuerbar()) datenquelle.wechseln('simulation');
+  datenquelle.setzeZustand(zustand);
+  zustandAnzeigen();
 }
 
 elStart.addEventListener('click', () => {
@@ -65,15 +67,8 @@ elStartStopp.addEventListener('click', () => {
   zustandAnzeigen();
 });
 
-elRuhe.addEventListener('click', () => {
-  datenquelle.setzeZustand('rest');
-  zustandAnzeigen();
-});
-
-elAnspannung.addEventListener('click', () => {
-  datenquelle.setzeZustand('stress');
-  zustandAnzeigen();
-});
+elRuhe.addEventListener('click',       () => zustandAnfordern('rest'));
+elAnspannung.addEventListener('click', () => zustandAnfordern('stress'));
 
 elQuelle.addEventListener('click', () => {
   // naechste() kann ablehnen, etwa wenn data/puls.json nicht geladen wurde.

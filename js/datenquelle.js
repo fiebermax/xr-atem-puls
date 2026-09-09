@@ -88,6 +88,12 @@ const datenquelle = {
     return this.wechseln(namen[(i + 1) % namen.length]);
   },
 
+  // Meldet, ob die aktive Quelle auf setzeZustand reagiert. Eine Quelle mit
+  // festem Verlauf tut das nicht und sagt das ueber steuerbar: false.
+  steuerbar() {
+    return this.aktiv.steuerbar !== false;
+  },
+
   start()               { this.aktiv.start(); },
   stop()                { this.aktiv.stop(); },
   setzeZustand(zustand) { this.aktiv.setzeZustand(zustand); },

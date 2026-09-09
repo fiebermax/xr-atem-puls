@@ -48,20 +48,24 @@ Derselbe Verlauf in 72 Sekunden.
 | Element | Wirkung |
 |---|---|
 | **Start / Stopp** | Hält die Wiedergabe an. Die Lunge bleibt in ihrer aktuellen Größe stehen. |
-| **Ruhe** | Steuert die Simulation auf 60 bpm. Bei aktiver Aufzeichnung gesperrt. |
-| **Anspannung** | Steuert die Simulation auf 110 bpm. Bei aktiver Aufzeichnung gesperrt. |
+| **Ruhe** | Steuert auf 60 bpm. Läuft gerade die Aufzeichnung, wird dabei auf die Simulation gewechselt. |
+| **Anspannung** | Steuert auf 110 bpm, ebenso. |
 | **Quelle: …** | Schaltet zwischen Simulation und Aufzeichnung um. |
 
-Beim Start läuft die **Simulation**, alle Buttons sind bedienbar. Ein Klick auf
-**Quelle** schaltet auf die Aufzeichnung um — dann kommen die Werte aus
-`data/puls.json`, und Ruhe und Anspannung werden abgeblendet und gesperrt, weil
-der Verlauf in der Datei feststeht. Ihre grüne Markierung läuft aber weiter
-mit: die beiden Buttons werden dadurch zur Zustandsanzeige und zeigen, in
-welcher Phase die Datei gerade ist. Ein zweiter Klick führt zurück.
+**Beim Start läuft die Aufzeichnung.** Die Werte kommen also sofort aus
+`data/puls.json` und wandern durchgehend zwischen etwa 55 und 117 bpm — es
+steht nichts auf zwei festen Stufen. Dafür muss kein Button gedrückt werden.
 
-Die Anwendung startet bewusst **nicht** von sich aus in der Wiedergabe. Sonst
-wären zwei Buttons ab dem ersten Moment gesperrt, ohne dass jemand das
-ausgelöst hat — das sieht nach einem Defekt aus, nicht nach einer Regel.
+Ruhe und Anspannung sind trotzdem bedienbar. Der Verlauf in der Datei steht
+zwar fest und reagiert nicht auf `setzeZustand`, aber statt die beiden Buttons
+zu sperren, **übernimmt ein Klick die Steuerung** und wechselt dabei
+automatisch zur Simulation. Wer Anspannung drückt, will Anspannung sehen.
+
+Das ist bewusst so gelöst: gesperrte Buttons beim Start sind von einem Defekt
+nicht zu unterscheiden. Kein Element der Bedienleiste ist je ohne Wirkung.
+
+Der Quellen-Button bleibt der direkte Weg zwischen beiden Quellen und belegt,
+dass sie parallel lauffähig sind.
 
 ---
 

@@ -31,6 +31,11 @@ const SCHWELLE_STRESS = 90;
 const SCHWELLE_RUHE   = 80;
 
 const aufzeichnung = {
+  // Der Verlauf steht in der Datei fest, setzeZustand bleibt wirkungslos.
+  // Die Bedienoberflaeche liest das und wechselt bei Ruhe oder Anspannung
+  // von sich aus zur steuerbaren Quelle, statt die Buttons tot zu lassen.
+  steuerbar: false,
+
   werte: [],
   intervall: 1,
   dauer: 0,      // Sekunden fuer einen Durchlauf
@@ -184,10 +189,8 @@ const aufzeichnung = {
 
 datenquelle.registrieren('aufzeichnung', aufzeichnung);
 
-// Im Hintergrund laden, damit das Umschalten spaeter ohne Wartezeit geht.
-//
-// Bewusst NICHT gleich aktiv schalten. Bei laufender Wiedergabe sind Ruhe
-// und Anspannung gesperrt - startet die Anwendung von sich aus in diesem
-// Modus, wirken zwei Buttons von Anfang an tot, ohne dass jemand das
-// ausgeloest hat. Die Wiedergabe beginnt deshalb erst auf Knopfdruck.
-aufzeichnung.laden();
+// Laden und danach gleich aktiv schalten: die Werte sollen von Anfang an aus
+// der Datei kommen, damit der Puls durchgehend wandert statt zwischen zwei
+// festen Stufen zu stehen. Schlaegt das Laden fehl, lehnt wechseln() ab und
+// es bleibt bei der Simulation.
+aufzeichnung.laden().then(() => datenquelle.wechseln('aufzeichnung'));

@@ -118,11 +118,16 @@ function pruefe(name, bedingung, zusatz) {
          JSON.stringify(a.el['btn-quelle'].textContent));
 
   await a.auf.laden();
+  await new Promise(r => setTimeout(r, 0));   // automatischen Wechsel abwarten
   a.tick();
 
-  pruefe('Label zeigt die Simulation',
-         a.el['btn-quelle'].textContent === 'Quelle: Simulation',
+  pruefe('Aufzeichnung laeuft ab dem Start', a.dq.name === 'aufzeichnung');
+  pruefe('Label zeigt die Aufzeichnung',
+         a.el['btn-quelle'].textContent === 'Quelle: Aufzeichnung',
          JSON.stringify(a.el['btn-quelle'].textContent));
+
+  // Kein Button darf beim Start tot sein. Genau das sah vorher wie ein
+  // Defekt aus, obwohl es der Regel entsprach.
   pruefe('Ruhe ist bedienbar',       a.el['btn-ruhe'].disabled === false);
   pruefe('Anspannung ist bedienbar', a.el['btn-anspannung'].disabled === false);
 
@@ -131,21 +136,20 @@ function pruefe(name, bedingung, zusatz) {
   pruefe('Start setzt die Wiedergabe in Gang', a.dq.laeuft() === true);
 
   a.el['btn-quelle'].klick();
-  pruefe('Klick wechselt zur Aufzeichnung', a.dq.name === 'aufzeichnung');
+  pruefe('Klick wechselt zur Simulation', a.dq.name === 'simulation');
   pruefe('Label folgt dem Wechsel',
-         a.el['btn-quelle'].textContent === 'Quelle: Aufzeichnung',
+         a.el['btn-quelle'].textContent === 'Quelle: Simulation',
          JSON.stringify(a.el['btn-quelle'].textContent));
-  pruefe('Ruhe wird gesperrt',       a.el['btn-ruhe'].disabled === true);
-  pruefe('Anspannung wird gesperrt', a.el['btn-anspannung'].disabled === true);
 
   a.el['btn-quelle'].klick();
-  pruefe('zweiter Klick fuehrt zurueck', a.dq.name === 'simulation');
-  pruefe('Sperre wird wieder aufgehoben', a.el['btn-ruhe'].disabled === false);
+  pruefe('zweiter Klick fuehrt zurueck', a.dq.name === 'aufzeichnung');
 
-  console.log('\n--- Steuerung und Anzeige ---');
+  console.log('\n--- Ruhe und Anspannung waehrend der Wiedergabe ---');
+  pruefe('Ausgangslage ist die Aufzeichnung', a.dq.name === 'aufzeichnung');
+
   a.el['btn-anspannung'].klick();
-  pruefe('Anspannung wird uebernommen',
-         a.dq.getDaten().state === 'stress');
+  pruefe('Klick uebernimmt die Steuerung', a.dq.name === 'simulation');
+  pruefe('und setzt den Zustand', a.dq.getDaten().state === 'stress');
 
   for (let i = 0; i < 600; i++) a.dq.update(1 / 60);
   a.tick();
