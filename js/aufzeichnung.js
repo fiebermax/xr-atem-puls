@@ -176,5 +176,7 @@ const aufzeichnung = {
 
 datenquelle.registrieren('aufzeichnung', aufzeichnung);
 
-// Im Hintergrund laden, damit das Umschalten spaeter ohne Wartezeit geht.
-aufzeichnung.laden();
+// Laden und danach gleich aktiv schalten: die Werte sollen aus der Datei
+// kommen, ohne dass jemand erst den Umschalter druecken muss. Schlaegt das
+// Laden fehl, lehnt wechseln() ab und es bleibt bei der Simulation.
+aufzeichnung.laden().then(() => datenquelle.wechseln('aufzeichnung'));

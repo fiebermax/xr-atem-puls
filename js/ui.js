@@ -26,8 +26,15 @@ function zustandAnzeigen() {
   elAnspannung.classList.toggle('aktiv', daten.state === 'stress');
   elStartStopp.textContent = datenquelle.laeuft() ? 'Stopp' : 'Start';
 
-  elQuelle.textContent = 'Quelle: ' +
-    (QUELLENNAMEN[datenquelle.name] || datenquelle.name);
+  // Ein fehlgeschlagener Ladeversuch darf nicht nur in der Konsole stehen,
+  // sonst wirkt ein abgelehnter Wechsel wie ein toter Button.
+  const gestoert = datenquelle.stoerung();
+
+  elQuelle.textContent = gestoert
+    ? 'Quelle: ' + (QUELLENNAMEN[gestoert] || gestoert) + ' fehlt'
+    : 'Quelle: ' + (QUELLENNAMEN[datenquelle.name] || datenquelle.name);
+
+  elQuelle.classList.toggle('stoerung', gestoert !== null);
 
   // Bei Wiedergabe aus der Datei steht der Verlauf fest. Ruhe und Anspannung
   // sind dann ohne Funktion und werden zur reinen Zustandsanzeige: die

@@ -80,14 +80,18 @@ function groessterSchritt(werte) {
 
 (async () => {
 
-  console.log('\n--- Simulation ---');
+  console.log('\n--- Startquelle ---');
   const { dq, auf } = laden(vonPlatte);
   await auf.laden();
+  await new Promise(r => setTimeout(r, 0));   // automatischen Wechsel abwarten
 
-  pruefe('Standardquelle ist die Simulation', dq.name === 'simulation');
   pruefe('beide Quellen registriert',
          Object.keys(dq.quellen).join(',') === 'simulation,aufzeichnung');
+  pruefe('nach dem Laden ist die Aufzeichnung aktiv', dq.name === 'aufzeichnung');
+  pruefe('keine Stoerung gemeldet', dq.stoerung() === null);
 
+  console.log('\n--- Simulation ---');
+  dq.wechseln('simulation');
   dq.start();
   fahren(dq, 15);
   pruefe('Ruhe naehert sich 60 bpm', Math.abs(dq.puls - 60) < 4, dq.puls.toFixed(1));
@@ -188,6 +192,8 @@ function groessterSchritt(werte) {
   pruefe('fehlende Datei: Wechsel wird abgelehnt',
          fehlt.dq.wechseln('aufzeichnung') === false);
   pruefe('fehlende Datei: bleibt auf der Simulation', fehlt.dq.name === 'simulation');
+  pruefe('fehlende Datei: Stoerung wird gemeldet',
+         fehlt.dq.stoerung() === 'aufzeichnung');
 
   fehlt.dq.start();
   fahren(fehlt.dq, 3);

@@ -112,6 +112,19 @@ const datenquelle = {
     return this.puls;
   },
 
+  // Meldet den Namen einer registrierten Quelle, die sich nicht aktivieren
+  // laesst, sonst null. Damit kann die Oberflaeche einen Ladefehler zeigen,
+  // statt ihn nur in die Konsole zu schreiben.
+  stoerung() {
+    for (const [name, quelle] of Object.entries(this.quellen)) {
+      if (quelle !== this.aktiv &&
+          typeof quelle.verfuegbar === 'function' && !quelle.verfuegbar()) {
+        return name;
+      }
+    }
+    return null;
+  },
+
   // Normierte Anspannung: 0 beim Ruhepuls, 1 beim Anspannungspuls.
   // Gemeinsame Skala fuer Modellgroesse und Hintergrundfarbe.
   anteil() {
