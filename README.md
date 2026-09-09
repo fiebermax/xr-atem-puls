@@ -27,13 +27,13 @@ braucht aber einen **HTTP-Server**:
 
 Die Adresszeile muss mit `http://` beginnen. Über `file://` blockiert der
 Browser sowohl `fetch` als auch das Laden des glTF-Modells — die Lunge bliebe
-unsichtbar und die Aufzeichnung stumm. Wenn der Quellen-Button orange
-**„Quelle: Aufzeichnung fehlt"** anzeigt, ist genau das die Ursache.
+unsichtbar und die Live Simulation stumm. Wenn der Live-Button orange
+**„Live Simulation: Datei fehlt"** anzeigt, ist genau das die Ursache.
 
 ### Schnelldurchlauf für Vorführungen
 
-Die Standardaufzeichnung dauert fünf Minuten. Für einen schnellen Durchlauf
-hängt man eine andere Datei an die Adresse:
+Die Standarddatei dauert fünf Minuten. Für einen schnellen Durchlauf hängt
+man eine andere an die Adresse:
 
 ```
 http://localhost:5500/?aufzeichnung=data/puls-kurz.csv
@@ -50,22 +50,21 @@ Derselbe Verlauf in 72 Sekunden.
 | **Start / Stopp** | Hält die Wiedergabe an. Die Lunge bleibt in ihrer aktuellen Größe stehen. |
 | **Ruhe** | Steuert auf 60 bpm. Läuft gerade die Aufzeichnung, wird dabei auf die Simulation gewechselt. |
 | **Anspannung** | Steuert auf 110 bpm, ebenso. |
-| **Quelle: …** | Schaltet zwischen Simulation und Aufzeichnung um. |
+| **Live Simulation** | Spielt die Werte aus `data/puls.csv` ab. Grün markiert, solange sie läuft. Nochmal drücken schaltet zurück auf die Formel. |
 
-**Beim Start läuft die Aufzeichnung.** Die Werte kommen also sofort aus
-`data/puls.json` und wandern durchgehend zwischen etwa 55 und 117 bpm — es
-steht nichts auf zwei festen Stufen. Dafür muss kein Button gedrückt werden.
+**Die Live Simulation läuft ab dem Start.** Die Werte kommen sofort aus
+`data/puls.csv` und wandern durchgehend zwischen 54 und 117 bpm — der Puls
+steht nirgends auf einer festen Stufe. Dafür muss nichts gedrückt werden.
 
-Ruhe und Anspannung sind trotzdem bedienbar. Der Verlauf in der Datei steht
-zwar fest und reagiert nicht auf `setzeZustand`, aber statt die beiden Buttons
-zu sperren, **übernimmt ein Klick die Steuerung** und wechselt dabei
-automatisch zur Simulation. Wer Anspannung drückt, will Anspannung sehen.
+Der Name sagt bewusst *Simulation*: die Werte sind erzeugt, es hängt kein
+Sensor daran. „Live" meint nur, dass sie fortlaufend hereinkommen, so wie es
+ein echter Sensor täte.
 
-Das ist bewusst so gelöst: gesperrte Buttons beim Start sind von einem Defekt
-nicht zu unterscheiden. Kein Element der Bedienleiste ist je ohne Wirkung.
-
-Der Quellen-Button bleibt der direkte Weg zwischen beiden Quellen und belegt,
-dass sie parallel lauffähig sind.
+Ruhe und Anspannung bleiben bedienbar. Der Verlauf in der Datei steht zwar fest
+und reagiert nicht auf `setzeZustand`, aber statt die beiden Buttons zu
+sperren, **übernimmt ein Klick die Steuerung** und schaltet dabei die Live
+Simulation ab. Wer Anspannung drückt, will Anspannung sehen. Kein Element der
+Bedienleiste ist je ohne Wirkung.
 
 ---
 
@@ -123,8 +122,8 @@ Stelle. Größe, Licht, Ring und Himmel lesen denselben Wert.
                 v                               v
      +--------------------+        +-------------------------+
      | js/simulation.js   |        |  js/aufzeichnung.js     |
-     | Formel 60 <-> 110  |        |  data/puls.json  (JSON) |
-     |                    |        |  data/*.csv      (CSV)  |
+     | Formel 60 <-> 110  |        |  data/puls.csv   (CSV)  |
+     |                    |        |  data/puls.json  (JSON) |
      +--------------------+        +-------------------------+
 
 
@@ -263,8 +262,8 @@ dazukommt — nur die Anzeigenamen in `QUELLENNAMEN` wachsen mit.
 Zeigt außerdem an, wenn sich eine Quelle nicht aktivieren lässt. Ohne das stünde
 ein abgelehnter Wechsel nur in der Konsole und der Button wirkte tot.
 
-### `data/puls.json`
-Die Standardaufzeichnung. 300 Werte im Sekundentakt, fünf Minuten.
+### `data/puls.csv`
+Die Standarddatei der Live Simulation. 300 Werte im Sekundentakt, fünf Minuten.
 
 Verlauf: 60 s ruhig um 62 bpm, Anstieg auf 112 bpm, 90 s erhöht, dann langsame
 Beruhigung zurück auf 60 bpm. Die Schwankung ist kein Zufallsrauschen, sondern
@@ -272,10 +271,13 @@ respiratorische Sinusarrhythmie (Puls schwankt mit der Atmung) plus Mayer-Wellen
 der Blutdruckregulation. Die Amplitude der Sinusarrhythmie sinkt unter
 Belastung — das ist physiologisch so.
 
+### `data/puls.json`
+Dieselben 300 Werte als JSON. Beleg, dass die Schnittstelle beide Formate
+annimmt: `?aufzeichnung=data/puls.json` spielt sie unverändert ab.
+
 ### `data/puls-kurz.csv`
-Derselbe Bogen in 72 Sekunden, als CSV. Zum schnellen Testen und als Beleg,
-dass die Schnittstelle beide Formate annimmt. Zeitlich gerafft und deshalb
-nicht physiologisch — für die Abgabe ist `puls.json` gedacht.
+Derselbe Bogen in 72 Sekunden. Zum schnellen Testen. Zeitlich gerafft und
+deshalb nicht physiologisch — für die Abgabe ist `puls.csv` gedacht.
 
 ### `test/schnittstelle.js`
 Prüft beide Quellen ohne Browser. Kein Teil der Anwendung; die Anwendung selbst
@@ -349,11 +351,12 @@ Regel CSV sind.
 2. Am Ende der Datei registrieren:
    `datenquelle.registrieren('sensor', sensor);`
 3. Script-Tag in `index.html` nach `js/datenquelle.js` einhängen.
-4. Anzeigename in `QUELLENNAMEN` in `js/ui.js` ergänzen.
+4. In `js/ui.js` beim Live-Button eintragen, falls er sie ansteuern soll.
 
-Mehr ist nicht nötig. Der Quellen-Button geht reihum durch alle registrierten
-Quellen, die Überblendung beim Wechsel greift automatisch, und an Mapping,
-Animation oder Pulsanzeige ändert sich nichts.
+Mehr ist nicht nötig. Die Überblendung beim Wechsel greift automatisch, und an
+Mapping, Animation oder Pulsanzeige ändert sich nichts. In `js/ui.js` legt der
+Live-Button fest, zwischen welchen beiden Quellen er schaltet — dort steht die
+einzige Stelle, die Quellen beim Namen nennt.
 
 ---
 

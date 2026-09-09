@@ -15,7 +15,7 @@ const path = require('path');
 const WURZEL = path.join(__dirname, '..');
 
 const IDS = ['btn-los', 'startbildschirm', 'pulsanzeige', 'bedienleiste',
-             'btn-startstopp', 'btn-ruhe', 'btn-anspannung', 'btn-quelle'];
+             'btn-startstopp', 'btn-ruhe', 'btn-anspannung', 'btn-live'];
 
 // Gerade so viel DOM, wie js/ui.js benutzt.
 function macheElement(id) {
@@ -106,7 +106,7 @@ function pruefe(name, bedingung, zusatz) {
   const a = aufbauen(vonPlatte);
 
   for (const id of ['btn-los', 'btn-startstopp', 'btn-ruhe',
-                    'btn-anspannung', 'btn-quelle']) {
+                    'btn-anspannung', 'btn-live']) {
     pruefe('#' + id + ' hat genau einen Klick-Listener',
            a.el[id].anzahlListener() === 1);
   }
@@ -114,17 +114,19 @@ function pruefe(name, bedingung, zusatz) {
   console.log('\n--- Zustand beim Start ---');
   // Noch waehrend des Ladens: hier trat der Fehlalarm auf.
   pruefe('meldet waehrend des Ladens keine Stoerung',
-         a.el['btn-quelle'].classList.contains('stoerung') === false,
-         JSON.stringify(a.el['btn-quelle'].textContent));
+         a.el['btn-live'].classList.contains('stoerung') === false,
+         JSON.stringify(a.el['btn-live'].textContent));
 
   await a.auf.laden();
   await new Promise(r => setTimeout(r, 0));   // automatischen Wechsel abwarten
   a.tick();
 
-  pruefe('Aufzeichnung laeuft ab dem Start', a.dq.name === 'aufzeichnung');
-  pruefe('Label zeigt die Aufzeichnung',
-         a.el['btn-quelle'].textContent === 'Quelle: Aufzeichnung',
-         JSON.stringify(a.el['btn-quelle'].textContent));
+  pruefe('CSV-Wiedergabe laeuft ab dem Start', a.dq.name === 'aufzeichnung');
+  pruefe('Beschriftung lautet "Live Simulation"',
+         a.el['btn-live'].textContent === 'Live Simulation',
+         JSON.stringify(a.el['btn-live'].textContent));
+  pruefe('Button ist als aktiv markiert',
+         a.el['btn-live'].classList.contains('aktiv') === true);
 
   // Kein Button darf beim Start tot sein. Genau das sah vorher wie ein
   // Defekt aus, obwohl es der Regel entsprach.
@@ -135,14 +137,18 @@ function pruefe(name, bedingung, zusatz) {
   a.el['btn-los'].klick();
   pruefe('Start setzt die Wiedergabe in Gang', a.dq.laeuft() === true);
 
-  a.el['btn-quelle'].klick();
-  pruefe('Klick wechselt zur Simulation', a.dq.name === 'simulation');
-  pruefe('Label folgt dem Wechsel',
-         a.el['btn-quelle'].textContent === 'Quelle: Simulation',
-         JSON.stringify(a.el['btn-quelle'].textContent));
+  a.el['btn-live'].klick();
+  pruefe('Klick schaltet die Wiedergabe ab', a.dq.name === 'simulation');
+  pruefe('Markierung faellt dabei weg',
+         a.el['btn-live'].classList.contains('aktiv') === false);
+  pruefe('Beschriftung bleibt unveraendert',
+         a.el['btn-live'].textContent === 'Live Simulation',
+         JSON.stringify(a.el['btn-live'].textContent));
 
-  a.el['btn-quelle'].klick();
-  pruefe('zweiter Klick fuehrt zurueck', a.dq.name === 'aufzeichnung');
+  a.el['btn-live'].klick();
+  pruefe('zweiter Klick schaltet sie wieder an', a.dq.name === 'aufzeichnung');
+  pruefe('Markierung ist wieder da',
+         a.el['btn-live'].classList.contains('aktiv') === true);
 
   console.log('\n--- Ruhe und Anspannung waehrend der Wiedergabe ---');
   pruefe('Ausgangslage ist die Aufzeichnung', a.dq.name === 'aufzeichnung');
@@ -172,13 +178,13 @@ function pruefe(name, bedingung, zusatz) {
   b.tick();
 
   pruefe('Stoerung wird am Button angezeigt',
-         b.el['btn-quelle'].classList.contains('stoerung') === true);
+         b.el['btn-live'].classList.contains('stoerung') === true);
   pruefe('Label nennt die fehlende Quelle',
-         b.el['btn-quelle'].textContent === 'Quelle: Aufzeichnung fehlt',
-         JSON.stringify(b.el['btn-quelle'].textContent));
+         b.el['btn-live'].textContent === 'Live Simulation: Datei fehlt',
+         JSON.stringify(b.el['btn-live'].textContent));
 
   b.el['btn-los'].klick();
-  b.el['btn-quelle'].klick();
+  b.el['btn-live'].klick();
   pruefe('Klick wechselt nicht auf die kaputte Quelle',
          b.dq.name === 'simulation');
   pruefe('Ruhe bleibt bedienbar', b.el['btn-ruhe'].disabled === false);

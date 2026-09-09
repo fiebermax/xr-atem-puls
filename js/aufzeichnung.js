@@ -23,7 +23,7 @@
 // Standardpfad. Zum Testen ohne Codeaenderung per Adresszeile umstellbar:
 //   http://localhost:5500/?aufzeichnung=data/puls-kurz.csv
 const PFAD = new URLSearchParams(location.search).get('aufzeichnung')
-          || 'data/puls.json';
+          || 'data/puls.csv';
 
 // Schwellen fuer die Ableitung des Zustands aus dem Pulswert. Der Abstand
 // zwischen beiden verhindert Flackern, wenn der Wert an der Grenze pendelt.

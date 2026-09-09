@@ -81,13 +81,6 @@ const datenquelle = {
     return true;
   },
 
-  // Reihum durch alle registrierten Quellen
-  naechste() {
-    const namen = Object.keys(this.quellen);
-    const i = namen.indexOf(this.name);
-    return this.wechseln(namen[(i + 1) % namen.length]);
-  },
-
   // Meldet, ob die aktive Quelle auf setzeZustand reagiert. Eine Quelle mit
   // festem Verlauf tut das nicht und sagt das ueber steuerbar: false.
   steuerbar() {

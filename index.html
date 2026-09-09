@@ -55,10 +55,12 @@
       #bedienleiste button:disabled:hover { border-color: rgba(255,255,255,0.16); }
 
       /* Umschalter etwas absetzen, er gehoert nicht zur Zustandssteuerung */
-      #btn-quelle { margin-left: 12px; }
+      #btn-live { margin-left: 12px; }
 
       /* Datei nicht ladbar: sichtbar machen statt nur in der Konsole melden */
-      #btn-quelle.stoerung { border-color: #C4703A; color: #F0B080; }
+      #btn-live.stoerung {
+        background: rgba(12,24,28,0.55); border-color: #C4703A; color: #F0B080;
+      }
 
       #startbildschirm {
         position: fixed; inset: 0; z-index: 20;
@@ -100,7 +102,7 @@
       <button id="btn-startstopp">Stopp</button>
       <button id="btn-ruhe" class="aktiv">Ruhe</button>
       <button id="btn-anspannung">Anspannung</button>
-      <button id="btn-quelle">Quelle: Simulation</button>
+      <button id="btn-live">Live Simulation</button>
     </div>
 
     <!-- XR-Szene -->

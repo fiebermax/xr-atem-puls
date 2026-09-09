@@ -11,13 +11,7 @@ const elLeiste       = document.getElementById('bedienleiste');
 const elStartStopp   = document.getElementById('btn-startstopp');
 const elRuhe         = document.getElementById('btn-ruhe');
 const elAnspannung   = document.getElementById('btn-anspannung');
-const elQuelle       = document.getElementById('btn-quelle');
-
-// Anzeigenamen der registrierten Quellen
-const QUELLENNAMEN = {
-  simulation:   'Simulation',
-  aufzeichnung: 'Aufzeichnung'
-};
+const elLive         = document.getElementById('btn-live');
 
 function zustandAnzeigen() {
   const daten = datenquelle.getDaten();
@@ -27,14 +21,14 @@ function zustandAnzeigen() {
   elStartStopp.textContent = datenquelle.laeuft() ? 'Stopp' : 'Start';
 
   // Ein fehlgeschlagener Ladeversuch darf nicht nur in der Konsole stehen,
-  // sonst wirkt ein abgelehnter Wechsel wie ein toter Button.
+  // sonst wirkt ein abgelehnter Klick wie ein toter Button.
   const gestoert = datenquelle.stoerung();
 
-  elQuelle.textContent = gestoert
-    ? 'Quelle: ' + (QUELLENNAMEN[gestoert] || gestoert) + ' fehlt'
-    : 'Quelle: ' + (QUELLENNAMEN[datenquelle.name] || datenquelle.name);
+  elLive.textContent = gestoert ? 'Live Simulation: Datei fehlt'
+                                : 'Live Simulation';
 
-  elQuelle.classList.toggle('stoerung', gestoert !== null);
+  elLive.classList.toggle('stoerung', gestoert !== null);
+  elLive.classList.toggle('aktiv', datenquelle.name === 'aufzeichnung');
 }
 
 // Ruhe und Anspannung. Laeuft gerade die Aufzeichnung, reagiert die nicht auf
@@ -70,11 +64,14 @@ elStartStopp.addEventListener('click', () => {
 elRuhe.addEventListener('click',       () => zustandAnfordern('rest'));
 elAnspannung.addEventListener('click', () => zustandAnfordern('stress'));
 
-elQuelle.addEventListener('click', () => {
-  // naechste() kann ablehnen, etwa wenn data/puls.json nicht geladen wurde.
-  // Die Beschriftung wird deshalb immer aus dem tatsaechlichen Zustand neu
-  // gesetzt und nie aus der Annahme, der Wechsel haette geklappt.
-  datenquelle.naechste();
+// Schaltet die Wiedergabe der CSV-Werte ein und aus. wechseln() kann
+// ablehnen, etwa wenn die Datei nicht geladen wurde. Die Beschriftung wird
+// deshalb immer aus dem tatsaechlichen Zustand neu gesetzt und nie aus der
+// Annahme, der Klick haette gewirkt.
+elLive.addEventListener('click', () => {
+  datenquelle.wechseln(
+    datenquelle.name === 'aufzeichnung' ? 'simulation' : 'aufzeichnung'
+  );
   zustandAnzeigen();
 });
 
