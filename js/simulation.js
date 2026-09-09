@@ -4,6 +4,10 @@
 // sich dort unter dem Namen "simulation". Sie ist die Standardquelle, weil
 // sie ohne Datei und ohne Server auskommt.
 
+// Aeusserste Grenzen, auf die der ausgegebene Wert geklemmt wird. Sie sind
+// bewusst weiter gefasst als die beiden Zielwerte unten: die natuerliche
+// Schwankung darf ueber 60 bzw. 110 bpm hinausgehen, ein unplausibler Wert
+// aber nicht.
 const HR_MIN = 50;
 const HR_MAX = 120;
 
@@ -24,15 +28,19 @@ const simulation = {
   puls: ZIELWERTE.rest,        // ausgegebener Wert inkl. Schwankung
   rauschzeit: 0,
 
+  // Nimmt den Zustand von vor dem Stopp wieder auf.
   start() {
     this.zustand = this.letzterZustand;
   },
 
+  // Der laufende Zustand wird gemerkt, damit Start dort weitermacht, wo
+  // Stopp aufgehoert hat, statt immer bei "Ruhe" zu beginnen.
   stop() {
     if (this.zustand !== 'stopped') this.letzterZustand = this.zustand;
     this.zustand = 'stopped';
   },
 
+  // Im Zustand "stopped" wirkungslos: erst starten, dann steuern.
   setzeZustand(neuerZustand) {
     if (this.zustand === 'stopped') return;
     this.zustand = neuerZustand;
@@ -56,7 +64,9 @@ const simulation = {
   update(deltaZeit) {
     if (!this.laeuft()) return this.puls;
 
-    // gleitende Annaeherung an den Zielwert
+    // Gleitende Annaeherung an den Zielwert. UEBERGANGSDAUER gilt fuer den
+    // vollen Bereich HR_MIN bis HR_MAX. Der Weg von 60 auf 110 bpm ist nur
+    // ein Teil davon und dauert deshalb rund sieben statt zehn Sekunden.
     const ziel = ZIELWERTE[this.zustand];
     const schritt = (HR_MAX - HR_MIN) / UEBERGANGSDAUER * deltaZeit;
 

@@ -3,11 +3,15 @@
 // Der Uebergang braucht dieselben rund 10 Sekunden wie die Groessenaenderung,
 // weil beide am selben Pulswert aus js/datenquelle.js haengen.
 
-// Eigener Shader: zwei Farben, senkrecht ineinander geblendet.
+// Eigener Shader: zwei Farben, senkrecht ineinander geblendet. A-Frame
+// bringt keinen Verlaufs-Shader mit, deshalb hier von Hand.
 AFRAME.registerShader('verlauf', {
   schema: {
     farbeOben:  { type: 'color',  default: '#20454C', is: 'uniform' },
     farbeUnten: { type: 'color',  default: '#0E1F22', is: 'uniform' },
+
+    // Breite des Uebergangs. 0 gibt eine harte Kante am Horizont,
+    // 1 blendet ueber die gesamte Kugel.
     weichheit:  { type: 'number', default: 0.9,       is: 'uniform' }
   },
 
@@ -52,10 +56,15 @@ AFRAME.registerComponent('himmel-puls', {
   },
 
   init: function () {
+    // Zwei Farbobjekte zum Wiederverwenden. In tick jedes Bild neue
+    // anzulegen waere unnoetiger Muell fuer die Speicherbereinigung.
     this.oben  = new THREE.Color();
     this.unten = new THREE.Color();
   },
 
+  // Die vier Eckfarben einmal umrechnen statt in jedem Bild. THREE.Color
+  // wandelt den Hexwert dabei in den linearen Arbeitsfarbraum um, was fuer
+  // das Mischen mit lerp auch der richtige Raum ist.
   update: function () {
     this.ruheOben    = new THREE.Color(this.data.ruheOben);
     this.ruheUnten   = new THREE.Color(this.data.ruheUnten);

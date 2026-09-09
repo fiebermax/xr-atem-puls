@@ -116,12 +116,18 @@
                 material="shader: verlauf; side: back"
                 himmel-puls></a-entity>
 
+      <!-- Die Helligkeit schreibt atem-licht in jedem Bild neu,
+           der Wert hier ist nur der Ausgangspunkt. -->
       <a-light type="ambient" intensity="0.6" atem-licht></a-light>
       <a-light type="directional" intensity="0.5" position="-1 2 1"></a-light>
 
+      <!-- Boden. Neutral gehalten, damit er zur kuehlen wie zur
+           warmen Himmelsfarbe passt. -->
       <a-circle position="0 0 -2" rotation="-90 0 0" radius="3" color="#141B1E"></a-circle>
 
-      <!-- Atemfuehrung: waechst und leuchtet im Takt des Modells -->
+      <!-- Atemfuehrung: waechst und leuchtet im Takt des Modells. Zwei
+           Zentimeter ueber dem Boden, sonst flimmern die beiden Flaechen
+           gegeneinander. -->
       <a-ring id="atemring" position="0 0.02 -2" rotation="-90 0 0"
               radius-inner="0.60" radius-outer="0.66"
               material="shader: flat; color: #3E8E7E; transparent: true; opacity: 0.3"
@@ -134,6 +140,8 @@
                   modell-fix="zielhoehe: 1.47"></a-entity>
       </a-entity>
 
+      <!-- Die Hoehe wirkt nur am Bildschirm. In VR ersetzt WebXR die
+           Kamerapose durch die Headset-Position ueber dem Boden. -->
       <a-camera position="0 1.54 0"></a-camera>
     </a-scene>
 

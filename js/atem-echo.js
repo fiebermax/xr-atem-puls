@@ -2,10 +2,13 @@
 // Atemzyklus wie das Modell. Beide lesen den Wert aus der atmung-Component,
 // damit es nur einen Takt gibt und nichts auseinanderlaeuft.
 
+// Die Klammer haelt die Hilfsfunktion unten aus dem gemeinsamen Namensraum
+// heraus. Klassische Scripts teilen sich einen, ein zweites atmungHolen in
+// einer anderen Datei wuerde sonst zum Konflikt.
 (function () {
 
   // Sucht die atmung-Component einmalig und merkt sie sich. Ein
-  // querySelector pro Frame waere im Headset spuerbar teuer.
+  // querySelector pro Bild waere im Headset spuerbar teuer.
   function atmungHolen(component) {
     if (component.atmung) return component.atmung;
 
