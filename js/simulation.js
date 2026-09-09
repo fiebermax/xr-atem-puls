@@ -1,12 +1,17 @@
-// Simulationsmodul: erzeugt einen plausiblen Herzfrequenzverlauf.
-// Austauschpunkt fuer eine reale Datenquelle, siehe Dokumentation Kapitel 13.
+// Datenquelle A: erzeugt einen plausiblen Herzfrequenzverlauf per Formel.
+//
+// Erfuellt die Quellen-Schnittstelle aus js/datenquelle.js und registriert
+// sich dort unter dem Namen "simulation". Sie ist die Standardquelle, weil
+// sie ohne Datei und ohne Server auskommt.
 
 const HR_MIN = 50;
 const HR_MAX = 120;
 
+// Zielwerte der beiden Zustaende. Der Bereich liegt in datenquelle.js,
+// damit Formel, Aufzeichnung und Darstellung dieselbe Skala benutzen.
 const ZIELWERTE = {
-  rest:   60,   // Zustand "Ruhe"
-  stress: 110   // Zustand "Anspannung"
+  rest:   datenquelle.bereich.ruhe,     // Zustand "Ruhe"
+  stress: datenquelle.bereich.stress    // Zustand "Anspannung"
 };
 
 const UEBERGANGSDAUER = 10;   // Sekunden fuer den vollen Bereich
@@ -15,8 +20,8 @@ const SCHWANKUNG      = 2.5;  // maximale Abweichung in bpm
 const simulation = {
   zustand: 'stopped',
   letzterZustand: 'rest',
-  basispuls: 60,   // geglaetteter Wert ohne Schwankung
-  puls: 60,        // ausgegebener Wert inkl. Schwankung
+  basispuls: ZIELWERTE.rest,   // geglaetteter Wert ohne Schwankung
+  puls: ZIELWERTE.rest,        // ausgegebener Wert inkl. Schwankung
   rauschzeit: 0,
 
   start() {
@@ -73,3 +78,5 @@ const simulation = {
     return this.puls;
   }
 };
+
+datenquelle.registrieren('simulation', simulation);

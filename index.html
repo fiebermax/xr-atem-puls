@@ -7,30 +7,66 @@
     <style>
       body { margin: 0; font-family: system-ui, sans-serif; }
 
+      /* Randabdunklung. Nur am Bildschirm sichtbar, im Headset nicht,
+         weil DOM-Overlays dort nicht gerendert werden. */
+      #vignette {
+        position: fixed; inset: 0; z-index: 5; pointer-events: none;
+        background: radial-gradient(ellipse at center,
+                    rgba(0,0,0,0) 42%, rgba(0,0,0,0.5) 100%);
+      }
+
       #pulsanzeige {
-        position: fixed; top: 16px; left: 16px; z-index: 10;
-        background: rgba(255,255,255,0.9); color: #12202A;
-        padding: 6px 14px; border-radius: 14px; font-size: 15px;
+        position: fixed; top: 18px; left: 18px; z-index: 10;
+        background: rgba(12,24,28,0.55);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.14);
+        color: #e6f0f2;
+        padding: 8px 16px; border-radius: 999px; font-size: 15px;
+        font-variant-numeric: tabular-nums;   /* Zahl zappelt nicht beim Wechsel */
+        letter-spacing: 0.02em;
       }
 
       #bedienleiste {
-        position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+        position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
         z-index: 10; display: flex; gap: 8px;
       }
 
       #bedienleiste button {
-        border: 1px solid #ccc; background: #fff; color: #12202A;
-        padding: 8px 18px; border-radius: 16px; font-size: 15px; cursor: pointer;
+        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(12,24,28,0.55);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        color: #e6f0f2;
+        padding: 9px 20px; border-radius: 999px; font-size: 15px; cursor: pointer;
+        transition: background 0.25s, border-color 0.25s, color 0.25s;
       }
+
+      #bedienleiste button:hover { border-color: rgba(255,255,255,0.34); }
 
       #bedienleiste button.aktiv { background: #2E9E6B; color: #fff; border-color: #2E9E6B; }
 
+      /* Bei Wiedergabe aus der Datei ohne Funktion. Die aktiv-Markierung
+         bleibt sichtbar, die Buttons zeigen dann nur noch den Zustand an. */
+      #bedienleiste button:disabled {
+        opacity: 0.45; cursor: not-allowed;
+      }
+
+      #bedienleiste button:disabled:hover { border-color: rgba(255,255,255,0.16); }
+
+      /* Umschalter etwas absetzen, er gehoert nicht zur Zustandssteuerung */
+      #btn-quelle { margin-left: 12px; }
+
       #startbildschirm {
         position: fixed; inset: 0; z-index: 20;
-        background: #1B2A33; color: #fff;
+        background: #0E1F22; color: #fff;   /* wie der untere Rand des Himmels */
         display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: 10px;
+        transition: opacity 0.8s ease;
       }
+
+      /* Weiches Ausblenden statt hartem Sprung in die Szene */
+      #startbildschirm.weg { opacity: 0; pointer-events: none; }
 
       #startbildschirm h1 { font-size: 26px; font-weight: 600; margin: 0; }
       #startbildschirm p  { color: #b8c4cc; margin: 0 0 14px 0; }
@@ -52,38 +88,60 @@
       <button id="btn-los">Start</button>
     </div>
 
-    <!-- Overlay -->
+    <div id="vignette"></div>
+
+    <!-- Overlay: Pulsanzeige und Bedienleiste -->
     <div id="pulsanzeige" class="versteckt">– bpm</div>
 
     <div id="bedienleiste" class="versteckt">
       <button id="btn-startstopp">Stopp</button>
       <button id="btn-ruhe" class="aktiv">Ruhe</button>
       <button id="btn-anspannung">Anspannung</button>
+      <button id="btn-quelle">Quelle: Simulation</button>
     </div>
 
-    <!-- Szene -->
+    <!-- XR-Szene -->
     <a-scene>
       <a-assets>
         <a-asset-item id="lunge" src="models/lunge.glb"></a-asset-item>
       </a-assets>
 
-      <a-sky color="#1B2A33"></a-sky>
-      <a-light type="ambient" intensity="0.6"></a-light>
+      <!-- Himmelskugel mit Farbverlauf. Kein a-sky, weil dessen
+           Standardfarbe nicht zum eigenen Shader passt. -->
+      <a-entity id="himmel"
+                geometry="primitive: sphere; radius: 400; segmentsWidth: 32; segmentsHeight: 24"
+                material="shader: verlauf; side: back"
+                himmel-puls></a-entity>
+
+      <a-light type="ambient" intensity="0.6" atem-licht></a-light>
       <a-light type="directional" intensity="0.5" position="-1 2 1"></a-light>
 
-      <a-circle position="0 0 -2" rotation="-90 0 0" radius="3" color="#12202A"></a-circle>
+      <a-circle position="0 0 -2" rotation="-90 0 0" radius="3" color="#141B1E"></a-circle>
 
-      <a-entity id="lungenmodell"
-                gltf-model="#lunge"
-                position="0 1.5 -2"
-                scale="0.5 0.5 0.5"
-                atmung="basis: 0.5"></a-entity>
+      <!-- Atemfuehrung: waechst und leuchtet im Takt des Modells -->
+      <a-ring id="atemring" position="0 0.02 -2" rotation="-90 0 0"
+              radius-inner="0.60" radius-outer="0.66"
+              material="shader: flat; color: #3E8E7E; transparent: true; opacity: 0.3"
+              atem-ring></a-ring>
 
-      <a-camera position="0 1.6 0"></a-camera>
+      <!-- Aeusserer Container wird skaliert, inneres Modell wird zentriert -->
+      <a-entity id="lungenmodell" position="0 1.5 -2" atmung>
+        <a-entity id="lunge-inner"
+                  gltf-model="#lunge"
+                  modell-fix="zielhoehe: 1.47"></a-entity>
+      </a-entity>
+
+      <a-camera position="0 1.54 0"></a-camera>
     </a-scene>
 
+    <!-- Schnittstelle und Umschalter zuerst, danach die Quellen -->
+    <script src="js/datenquelle.js"></script>
     <script src="js/simulation.js"></script>
+    <script src="js/aufzeichnung.js"></script>
+    <script src="js/modell-fix.js"></script>
     <script src="js/atmung.js"></script>
+    <script src="js/himmel.js"></script>
+    <script src="js/atem-echo.js"></script>
     <script src="js/ui.js"></script>
   </body>
 </html>

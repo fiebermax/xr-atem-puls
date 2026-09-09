@@ -1,4 +1,8 @@
 // Bedienoberflaeche: ruft ausschliesslich Zustandsfunktionen auf.
+//
+// Spricht nie eine Quelle direkt an, sondern immer den Umschalter in
+// js/datenquelle.js. Deshalb aendert sich an dieser Datei nichts, wenn
+// eine weitere Quelle dazukommt - nur die Beschriftung unten waechst mit.
 
 const elStart        = document.getElementById('btn-los');
 const elStartbild    = document.getElementById('startbildschirm');
@@ -7,43 +11,80 @@ const elLeiste       = document.getElementById('bedienleiste');
 const elStartStopp   = document.getElementById('btn-startstopp');
 const elRuhe         = document.getElementById('btn-ruhe');
 const elAnspannung   = document.getElementById('btn-anspannung');
+const elQuelle       = document.getElementById('btn-quelle');
+
+// Anzeigenamen der registrierten Quellen
+const QUELLENNAMEN = {
+  simulation:   'Simulation',
+  aufzeichnung: 'Aufzeichnung'
+};
 
 function zustandAnzeigen() {
-  elRuhe.classList.toggle('aktiv', simulation.zustand === 'rest');
-  elAnspannung.classList.toggle('aktiv', simulation.zustand === 'stress');
-  elStartStopp.textContent = simulation.laeuft() ? 'Stopp' : 'Start';
+  const daten = datenquelle.getDaten();
+
+  elRuhe.classList.toggle('aktiv', daten.state === 'rest');
+  elAnspannung.classList.toggle('aktiv', daten.state === 'stress');
+  elStartStopp.textContent = datenquelle.laeuft() ? 'Stopp' : 'Start';
+
+  elQuelle.textContent = 'Quelle: ' +
+    (QUELLENNAMEN[datenquelle.name] || datenquelle.name);
+
+  // Bei Wiedergabe aus der Datei steht der Verlauf fest. Ruhe und Anspannung
+  // sind dann ohne Funktion und werden zur reinen Zustandsanzeige: die
+  // aktiv-Markierung laeuft weiter und zeigt, in welcher Phase die Datei ist.
+  const steuerbar = datenquelle.name === 'simulation';
+  elRuhe.disabled       = !steuerbar;
+  elAnspannung.disabled = !steuerbar;
 }
 
 elStart.addEventListener('click', () => {
-  elStartbild.classList.add('versteckt');
+  // Erst ausblenden, danach aus dem Layout nehmen. Die Bedienelemente
+  // liegen schon darunter bereit und werden vom Verlauf freigelegt.
+  elStartbild.classList.add('weg');
+  setTimeout(() => elStartbild.classList.add('versteckt'), 800);
+
   elPuls.classList.remove('versteckt');
   elLeiste.classList.remove('versteckt');
-  simulation.start();
+  datenquelle.start();
   zustandAnzeigen();
 });
 
 elStartStopp.addEventListener('click', () => {
-  if (simulation.laeuft()) {
-    simulation.stop();
+  if (datenquelle.laeuft()) {
+    datenquelle.stop();
   } else {
-    simulation.start();
+    datenquelle.start();
   }
   zustandAnzeigen();
 });
 
 elRuhe.addEventListener('click', () => {
-  simulation.setzeZustand('rest');
+  datenquelle.setzeZustand('rest');
   zustandAnzeigen();
 });
 
 elAnspannung.addEventListener('click', () => {
-  simulation.setzeZustand('stress');
+  datenquelle.setzeZustand('stress');
+  zustandAnzeigen();
+});
+
+elQuelle.addEventListener('click', () => {
+  // naechste() kann ablehnen, etwa wenn data/puls.json nicht geladen wurde.
+  // Die Beschriftung wird deshalb immer aus dem tatsaechlichen Zustand neu
+  // gesetzt und nie aus der Annahme, der Wechsel haette geklappt.
+  datenquelle.naechste();
   zustandAnzeigen();
 });
 
 // Pulsanzeige aktualisieren
 setInterval(() => {
-  elPuls.textContent = simulation.laeuft()
-    ? Math.round(simulation.puls) + ' bpm'
+  elPuls.textContent = datenquelle.laeuft()
+    ? Math.round(datenquelle.puls) + ' bpm'
     : '– bpm';
+
+  // Bei der Aufzeichnung wechselt der Zustand ohne Klick, weil er aus der
+  // Datei abgeleitet wird. Die Anzeige muss deshalb mitziehen.
+  zustandAnzeigen();
 }, 200);
+
+zustandAnzeigen();
