@@ -52,14 +52,16 @@ Derselbe Verlauf in 72 Sekunden.
 | **Anspannung** | Steuert die Simulation auf 110 bpm. Bei aktiver Aufzeichnung gesperrt. |
 | **Quelle: …** | Schaltet zwischen Simulation und Aufzeichnung um. |
 
-Beim Start ist die **Aufzeichnung** aktiv, die Werte kommen also aus
-`data/puls.json`. Ruhe und Anspannung sind dann abgeblendet und ohne Funktion,
-weil der Verlauf in der Datei feststeht. Ihre grüne Markierung läuft aber
-weiter mit: die beiden Buttons werden dadurch zur Zustandsanzeige und zeigen,
-in welcher Phase die Datei gerade ist.
+Beim Start läuft die **Simulation**, alle Buttons sind bedienbar. Ein Klick auf
+**Quelle** schaltet auf die Aufzeichnung um — dann kommen die Werte aus
+`data/puls.json`, und Ruhe und Anspannung werden abgeblendet und gesperrt, weil
+der Verlauf in der Datei feststeht. Ihre grüne Markierung läuft aber weiter
+mit: die beiden Buttons werden dadurch zur Zustandsanzeige und zeigen, in
+welcher Phase die Datei gerade ist. Ein zweiter Klick führt zurück.
 
-Wer Ruhe und Anspannung von Hand vorführen will, schaltet mit dem
-Quellen-Button auf **Simulation** zurück.
+Die Anwendung startet bewusst **nicht** von sich aus in der Wiedergabe. Sonst
+wären zwei Buttons ab dem ersten Moment gesperrt, ohne dass jemand das
+ausgelöst hat — das sieht nach einem Defekt aus, nicht nach einer Regel.
 
 ---
 
@@ -355,16 +357,28 @@ Animation oder Pulsanzeige ändert sich nichts.
 
 ```
 node test/schnittstelle.js
+node test/oberflaeche.js
 ```
 
-30 Prüfungen. Abgedeckt sind: beide Quellen erfüllen den Vertrag vollständig,
+`schnittstelle.js` prüft die Datenschicht, 30 Prüfungen. Abgedeckt sind: beide Quellen erfüllen den Vertrag vollständig,
 der Wechsel läuft ohne Sprung (größter Wertsprung pro Bild unter 1 bpm), die
 Schleife am Dateiende läuft ohne Ruck durch, CSV und JSON werden gleich
 interpretiert, und bei fehlender oder defekter Datei fällt die Anwendung sauber
 auf die Simulation zurück.
 
-Der Test lädt die echten Modul-Dateien in einen `vm`-Kontext und ersetzt nur
-`fetch`. Es wird also der ausgelieferte Code geprüft, keine Kopie davon.
+`oberflaeche.js` prüft `js/ui.js` gegen einen minimalen DOM-Ersatz, 25
+Prüfungen: Verdrahtung der Buttons, Beschriftung, Sperren beim Umschalten und
+das Verhalten bei fehlender Datei.
+
+Beide Tests laden die echten Modul-Dateien in einen `vm`-Kontext und ersetzen
+nur `fetch` und das DOM. Es wird also der ausgelieferte Code geprüft, keine
+Kopie davon.
+
+Die Trennung hat einen konkreten Anlass: ein Fehler lag genau zwischen beiden
+Schichten. Der Quellen-Button meldete beim Start „Aufzeichnung fehlt", obwohl
+die Datei einwandfrei lud — `zustandAnzeigen()` läuft synchron, da war der
+`fetch` noch unterwegs. Die Datenschicht war fehlerfrei, sichtbar wurde es erst
+mit einem DOM.
 
 ---
 

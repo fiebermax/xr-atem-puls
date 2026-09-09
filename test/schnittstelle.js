@@ -82,16 +82,20 @@ function groessterSchritt(werte) {
 
   console.log('\n--- Startquelle ---');
   const { dq, auf } = laden(vonPlatte);
+
+  // Waehrend der fetch laeuft, ist die Aufzeichnung nicht verfuegbar, aber
+  // auch nicht kaputt. Wird das verwechselt, meldet die Bedienleiste beim
+  // Start einen Fehler, den es gar nicht gibt.
+  pruefe('waehrend des Ladens keine Stoerung', dq.stoerung() === null);
+
   await auf.laden();
-  await new Promise(r => setTimeout(r, 0));   // automatischen Wechsel abwarten
 
   pruefe('beide Quellen registriert',
          Object.keys(dq.quellen).join(',') === 'simulation,aufzeichnung');
-  pruefe('nach dem Laden ist die Aufzeichnung aktiv', dq.name === 'aufzeichnung');
-  pruefe('keine Stoerung gemeldet', dq.stoerung() === null);
+  pruefe('Startquelle ist die Simulation', dq.name === 'simulation');
+  pruefe('nach dem Laden keine Stoerung', dq.stoerung() === null);
 
   console.log('\n--- Simulation ---');
-  dq.wechseln('simulation');
   dq.start();
   fahren(dq, 15);
   pruefe('Ruhe naehert sich 60 bpm', Math.abs(dq.puls - 60) < 4, dq.puls.toFixed(1));

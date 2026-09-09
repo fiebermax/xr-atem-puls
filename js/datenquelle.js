@@ -117,8 +117,7 @@ const datenquelle = {
   // statt ihn nur in die Konsole zu schreiben.
   stoerung() {
     for (const [name, quelle] of Object.entries(this.quellen)) {
-      if (quelle !== this.aktiv &&
-          typeof quelle.verfuegbar === 'function' && !quelle.verfuegbar()) {
+      if (typeof quelle.stoerung === 'function' && quelle.stoerung()) {
         return name;
       }
     }

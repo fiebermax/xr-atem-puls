@@ -114,6 +114,14 @@ const aufzeichnung = {
     return this.geladen;
   },
 
+  // Grund, falls das Laden fehlgeschlagen ist, sonst null. Bewusst getrennt
+  // von verfuegbar(): waehrend der fetch noch laeuft, ist die Quelle nicht
+  // verfuegbar, aber auch nicht gestoert. Ohne diese Unterscheidung meldet
+  // die Bedienleiste beim Start einen Fehler, den es gar nicht gibt.
+  stoerung() {
+    return this.fehler;
+  },
+
   // Beginnt den Verlauf wieder am ruhigen Anfang, damit jede Vorfuehrung
   // denselben Bogen zeigt.
   start() {
@@ -176,7 +184,10 @@ const aufzeichnung = {
 
 datenquelle.registrieren('aufzeichnung', aufzeichnung);
 
-// Laden und danach gleich aktiv schalten: die Werte sollen aus der Datei
-// kommen, ohne dass jemand erst den Umschalter druecken muss. Schlaegt das
-// Laden fehl, lehnt wechseln() ab und es bleibt bei der Simulation.
-aufzeichnung.laden().then(() => datenquelle.wechseln('aufzeichnung'));
+// Im Hintergrund laden, damit das Umschalten spaeter ohne Wartezeit geht.
+//
+// Bewusst NICHT gleich aktiv schalten. Bei laufender Wiedergabe sind Ruhe
+// und Anspannung gesperrt - startet die Anwendung von sich aus in diesem
+// Modus, wirken zwei Buttons von Anfang an tot, ohne dass jemand das
+// ausgeloest hat. Die Wiedergabe beginnt deshalb erst auf Knopfdruck.
+aufzeichnung.laden();
