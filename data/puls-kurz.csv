@@ -1,6 +1,7 @@
-# Kurzfassung zum Testen: derselbe Bogen in 72 statt 300 Sekunden.
-# Zeitlich gerafft und deshalb nicht physiologisch - fuer die Abgabe
-# ist data/puls.json gedacht. Erzeugte Werte, keine echten Messdaten.
+# Standarddatei der Live Simulation: der volle Bogen in 72 Sekunden.
+# Zeitlich gerafft, damit eine Vorfuehrung nicht fuenf Minuten dauert, und
+# deshalb bewusst nicht physiologisch. Der realistisch getaktete Verlauf
+# liegt in data/puls.csv. Erzeugte Werte, keine echten Messdaten.
 # Spalten: zeit (Sekunden), puls (bpm)
 zeit,puls
 0,63

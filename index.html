@@ -27,6 +27,38 @@
         letter-spacing: 0.02em;
       }
 
+      /* Statusanzeige oben rechts: laeuft die Live Simulation gerade?
+         Ist zugleich Schalter, damit sie nicht nur meldet, sondern auch
+         schaltet. Der Punkt links traegt den Zustand. */
+      #live-status {
+        position: fixed; top: 18px; right: 18px; z-index: 10;
+        display: flex; align-items: center; gap: 9px;
+        background: rgba(12,24,28,0.55);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.14);
+        color: #e6f0f2;
+        padding: 8px 16px; border-radius: 999px;
+        font: inherit; font-size: 15px; cursor: pointer;
+        transition: border-color 0.25s;
+      }
+
+      #live-status:hover { border-color: rgba(255,255,255,0.34); }
+
+      #live-status::before {
+        content: ''; width: 9px; height: 9px; border-radius: 50%;
+        background: #6B7B84;                       /* aus */
+        transition: background 0.25s, box-shadow 0.25s;
+      }
+
+      #live-status.an::before {
+        background: #2E9E6B;                       /* an */
+        box-shadow: 0 0 0 3px rgba(46,158,107,0.25);
+      }
+
+      #live-status.stoerung::before { background: #C4703A; }
+      #live-status.stoerung { border-color: #C4703A; color: #F0B080; }
+
       #bedienleiste {
         position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
         z-index: 10; display: flex; gap: 8px;
@@ -97,6 +129,8 @@
 
     <!-- Overlay: Pulsanzeige und Bedienleiste -->
     <div id="pulsanzeige" class="versteckt">– bpm</div>
+
+    <button id="live-status" class="versteckt">Live Simulation: aus</button>
 
     <div id="bedienleiste" class="versteckt">
       <button id="btn-startstopp">Stopp</button>

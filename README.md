@@ -30,16 +30,17 @@ Browser sowohl `fetch` als auch das Laden des glTF-Modells — die Lunge bliebe
 unsichtbar und die Live Simulation stumm. Wenn der Live-Button orange
 **„Live Simulation: Datei fehlt"** anzeigt, ist genau das die Ursache.
 
-### Schnelldurchlauf für Vorführungen
+### Eine andere Datei abspielen
 
-Die Standarddatei dauert fünf Minuten. Für einen schnellen Durchlauf hängt
-man eine andere an die Adresse:
+Standard ist `data/puls-kurz.csv`: der volle Verlauf in 72 Sekunden, kurz
+genug für eine Vorführung. Wer den realistisch getakteten Fünf-Minuten-Verlauf
+sehen will, hängt ihn an die Adresse:
 
 ```
-http://localhost:5500/?aufzeichnung=data/puls-kurz.csv
+http://localhost:5500/?aufzeichnung=data/puls.csv
 ```
 
-Derselbe Verlauf in 72 Sekunden.
+Das funktioniert mit jeder Datei im Ordner `data/`, auch mit der JSON-Fassung.
 
 ---
 
@@ -50,11 +51,13 @@ Derselbe Verlauf in 72 Sekunden.
 | **Start / Stopp** | Hält die Wiedergabe an. Die Lunge bleibt in ihrer aktuellen Größe stehen. |
 | **Ruhe** | Steuert auf 60 bpm. Läuft gerade die Aufzeichnung, wird dabei auf die Simulation gewechselt. |
 | **Anspannung** | Steuert auf 110 bpm, ebenso. |
-| **Live Simulation** | Spielt die Werte aus `data/puls.csv` ab. Grün markiert, solange sie läuft. Nochmal drücken schaltet zurück auf die Formel. |
+| **Live Simulation** (unten) | Spielt die Werte aus `data/puls-kurz.csv` ab. Grün markiert, solange sie läuft. Nochmal drücken schaltet zurück auf die Formel. |
+| **Live Simulation: an / aus** (oben rechts) | Sagt in Worten, ob die Wiedergabe gerade läuft. Der Punkt links ist grün, wenn ja. Schaltet auf Klick genauso um. |
 
 **Die Live Simulation läuft ab dem Start.** Die Werte kommen sofort aus
-`data/puls.csv` und wandern durchgehend zwischen 54 und 117 bpm — der Puls
+`data/puls-kurz.csv` und wandern durchgehend zwischen 56 und 117 bpm — der Puls
 steht nirgends auf einer festen Stufe. Dafür muss nichts gedrückt werden.
+Oben rechts steht jederzeit, ob sie gerade läuft.
 
 Der Name sagt bewusst *Simulation*: die Werte sind erzeugt, es hängt kein
 Sensor daran. „Live" meint nur, dass sie fortlaufend hereinkommen, so wie es
@@ -122,8 +125,8 @@ Stelle. Größe, Licht, Ring und Himmel lesen denselben Wert.
                 v                               v
      +--------------------+        +-------------------------+
      | js/simulation.js   |        |  js/aufzeichnung.js     |
-     | Formel 60 <-> 110  |        |  data/puls.csv   (CSV)  |
-     |                    |        |  data/puls.json  (JSON) |
+     | Formel 60 <-> 110  |        |  data/puls-kurz.csv     |
+     |                    |        |  data/puls.csv / .json  |
      +--------------------+        +-------------------------+
 
 
@@ -262,22 +265,25 @@ dazukommt — nur die Anzeigenamen in `QUELLENNAMEN` wachsen mit.
 Zeigt außerdem an, wenn sich eine Quelle nicht aktivieren lässt. Ohne das stünde
 ein abgelehnter Wechsel nur in der Konsole und der Button wirkte tot.
 
-### `data/puls.csv`
-Die Standarddatei der Live Simulation. 300 Werte im Sekundentakt, fünf Minuten.
+### `data/puls-kurz.csv`
+**Die Standarddatei der Live Simulation.** 72 Werte im Sekundentakt. Derselbe
+Bogen wie unten, nur gerafft, damit eine Vorführung nicht fünf Minuten dauert.
+Genau deshalb ist er zeitlich nicht physiologisch: ein Puls steigt nicht in
+zwölf Sekunden von 62 auf 112.
 
-Verlauf: 60 s ruhig um 62 bpm, Anstieg auf 112 bpm, 90 s erhöht, dann langsame
-Beruhigung zurück auf 60 bpm. Die Schwankung ist kein Zufallsrauschen, sondern
-respiratorische Sinusarrhythmie (Puls schwankt mit der Atmung) plus Mayer-Wellen
-der Blutdruckregulation. Die Amplitude der Sinusarrhythmie sinkt unter
-Belastung — das ist physiologisch so.
+### `data/puls.csv`
+Der realistisch getaktete Verlauf. 300 Werte im Sekundentakt, fünf Minuten:
+60 s ruhig um 62 bpm, Anstieg auf 112 bpm, 90 s erhöht, dann langsame
+Beruhigung zurück auf 60 bpm.
+
+Die Schwankung ist kein Zufallsrauschen, sondern respiratorische
+Sinusarrhythmie (Puls schwankt mit der Atmung) plus Mayer-Wellen der
+Blutdruckregulation. Die Amplitude der Sinusarrhythmie sinkt unter Belastung —
+das ist physiologisch so.
 
 ### `data/puls.json`
 Dieselben 300 Werte als JSON. Beleg, dass die Schnittstelle beide Formate
 annimmt: `?aufzeichnung=data/puls.json` spielt sie unverändert ab.
-
-### `data/puls-kurz.csv`
-Derselbe Bogen in 72 Sekunden. Zum schnellen Testen. Zeitlich gerafft und
-deshalb nicht physiologisch — für die Abgabe ist `puls.csv` gedacht.
 
 ### `test/schnittstelle.js`
 Prüft beide Quellen ohne Browser. Kein Teil der Anwendung; die Anwendung selbst

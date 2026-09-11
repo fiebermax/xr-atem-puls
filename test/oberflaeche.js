@@ -15,7 +15,8 @@ const path = require('path');
 const WURZEL = path.join(__dirname, '..');
 
 const IDS = ['btn-los', 'startbildschirm', 'pulsanzeige', 'bedienleiste',
-             'btn-startstopp', 'btn-ruhe', 'btn-anspannung', 'btn-live'];
+             'btn-startstopp', 'btn-ruhe', 'btn-anspannung', 'btn-live',
+             'live-status'];
 
 // Gerade so viel DOM, wie js/ui.js benutzt.
 function macheElement(id) {
@@ -106,7 +107,7 @@ function pruefe(name, bedingung, zusatz) {
   const a = aufbauen(vonPlatte);
 
   for (const id of ['btn-los', 'btn-startstopp', 'btn-ruhe',
-                    'btn-anspannung', 'btn-live']) {
+                    'btn-anspannung', 'btn-live', 'live-status']) {
     pruefe('#' + id + ' hat genau einen Klick-Listener',
            a.el[id].anzahlListener() === 1);
   }
@@ -127,6 +128,11 @@ function pruefe(name, bedingung, zusatz) {
          JSON.stringify(a.el['btn-live'].textContent));
   pruefe('Button ist als aktiv markiert',
          a.el['btn-live'].classList.contains('aktiv') === true);
+  pruefe('Statusanzeige oben rechts meldet "an"',
+         a.el['live-status'].textContent === 'Live Simulation: an',
+         JSON.stringify(a.el['live-status'].textContent));
+  pruefe('Statusanzeige ist als an markiert',
+         a.el['live-status'].classList.contains('an') === true);
 
   // Kein Button darf beim Start tot sein. Genau das sah vorher wie ein
   // Defekt aus, obwohl es der Regel entsprach.
@@ -141,12 +147,18 @@ function pruefe(name, bedingung, zusatz) {
   pruefe('Klick schaltet die Wiedergabe ab', a.dq.name === 'simulation');
   pruefe('Markierung faellt dabei weg',
          a.el['btn-live'].classList.contains('aktiv') === false);
+  pruefe('Statusanzeige meldet "aus"',
+         a.el['live-status'].textContent === 'Live Simulation: aus',
+         JSON.stringify(a.el['live-status'].textContent));
+  pruefe('Statusanzeige ist nicht mehr als an markiert',
+         a.el['live-status'].classList.contains('an') === false);
   pruefe('Beschriftung bleibt unveraendert',
          a.el['btn-live'].textContent === 'Live Simulation',
          JSON.stringify(a.el['btn-live'].textContent));
 
-  a.el['btn-live'].klick();
-  pruefe('zweiter Klick schaltet sie wieder an', a.dq.name === 'aufzeichnung');
+  a.el['live-status'].klick();
+  pruefe('Klick auf die Statusanzeige schaltet sie wieder an',
+         a.dq.name === 'aufzeichnung');
   pruefe('Markierung ist wieder da',
          a.el['btn-live'].classList.contains('aktiv') === true);
 
@@ -182,6 +194,10 @@ function pruefe(name, bedingung, zusatz) {
   pruefe('Label nennt die fehlende Quelle',
          b.el['btn-live'].textContent === 'Live Simulation: Datei fehlt',
          JSON.stringify(b.el['btn-live'].textContent));
+  pruefe('Statusanzeige meldet den Fehler ebenfalls',
+         b.el['live-status'].textContent === 'Live Simulation: Datei fehlt' &&
+         b.el['live-status'].classList.contains('stoerung') === true,
+         JSON.stringify(b.el['live-status'].textContent));
 
   b.el['btn-los'].klick();
   b.el['btn-live'].klick();

@@ -20,10 +20,10 @@
 //
 // Hinweis: die Werte in data/ sind erzeugt, keine echten Messdaten.
 
-// Standardpfad. Zum Testen ohne Codeaenderung per Adresszeile umstellbar:
-//   http://localhost:5500/?aufzeichnung=data/puls-kurz.csv
+// Standardpfad. Ohne Codeaenderung per Adresszeile umstellbar, etwa auf den
+// langen Verlauf:  http://localhost:5500/?aufzeichnung=data/puls.csv
 const PFAD = new URLSearchParams(location.search).get('aufzeichnung')
-          || 'data/puls.csv';
+          || 'data/puls-kurz.csv';
 
 // Schwellen fuer die Ableitung des Zustands aus dem Pulswert. Der Abstand
 // zwischen beiden verhindert Flackern, wenn der Wert an der Grenze pendelt.

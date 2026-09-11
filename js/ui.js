@@ -12,6 +12,7 @@ const elStartStopp   = document.getElementById('btn-startstopp');
 const elRuhe         = document.getElementById('btn-ruhe');
 const elAnspannung   = document.getElementById('btn-anspannung');
 const elLive         = document.getElementById('btn-live');
+const elLiveStatus   = document.getElementById('live-status');
 
 function zustandAnzeigen() {
   const daten = datenquelle.getDaten();
@@ -23,12 +24,32 @@ function zustandAnzeigen() {
   // Ein fehlgeschlagener Ladeversuch darf nicht nur in der Konsole stehen,
   // sonst wirkt ein abgelehnter Klick wie ein toter Button.
   const gestoert = datenquelle.stoerung();
+  const an       = datenquelle.name === 'aufzeichnung';
 
   elLive.textContent = gestoert ? 'Live Simulation: Datei fehlt'
                                 : 'Live Simulation';
-
   elLive.classList.toggle('stoerung', gestoert !== null);
-  elLive.classList.toggle('aktiv', datenquelle.name === 'aufzeichnung');
+  elLive.classList.toggle('aktiv', an);
+
+  // Anzeige oben rechts. Sagt in Worten, was die gruene Markierung unten
+  // in der Leiste nur farblich zeigt.
+  elLiveStatus.textContent = gestoert
+    ? 'Live Simulation: Datei fehlt'
+    : 'Live Simulation: ' + (an ? 'an' : 'aus');
+
+  elLiveStatus.classList.toggle('stoerung', gestoert !== null);
+  elLiveStatus.classList.toggle('an', an && !gestoert);
+}
+
+// Schaltet die Wiedergabe der CSV-Werte ein und aus. wechseln() kann
+// ablehnen, etwa wenn die Datei nicht geladen wurde. Die Anzeige wird
+// deshalb immer aus dem tatsaechlichen Zustand neu gesetzt und nie aus der
+// Annahme, der Klick haette gewirkt.
+function liveUmschalten() {
+  datenquelle.wechseln(
+    datenquelle.name === 'aufzeichnung' ? 'simulation' : 'aufzeichnung'
+  );
+  zustandAnzeigen();
 }
 
 // Ruhe und Anspannung. Laeuft gerade die Aufzeichnung, reagiert die nicht auf
@@ -47,6 +68,7 @@ elStart.addEventListener('click', () => {
   setTimeout(() => elStartbild.classList.add('versteckt'), 800);
 
   elPuls.classList.remove('versteckt');
+  elLiveStatus.classList.remove('versteckt');
   elLeiste.classList.remove('versteckt');
   datenquelle.start();
   zustandAnzeigen();
@@ -64,16 +86,8 @@ elStartStopp.addEventListener('click', () => {
 elRuhe.addEventListener('click',       () => zustandAnfordern('rest'));
 elAnspannung.addEventListener('click', () => zustandAnfordern('stress'));
 
-// Schaltet die Wiedergabe der CSV-Werte ein und aus. wechseln() kann
-// ablehnen, etwa wenn die Datei nicht geladen wurde. Die Beschriftung wird
-// deshalb immer aus dem tatsaechlichen Zustand neu gesetzt und nie aus der
-// Annahme, der Klick haette gewirkt.
-elLive.addEventListener('click', () => {
-  datenquelle.wechseln(
-    datenquelle.name === 'aufzeichnung' ? 'simulation' : 'aufzeichnung'
-  );
-  zustandAnzeigen();
-});
+elLive.addEventListener('click', liveUmschalten);
+elLiveStatus.addEventListener('click', liveUmschalten);
 
 // Pulsanzeige aktualisieren
 setInterval(() => {
