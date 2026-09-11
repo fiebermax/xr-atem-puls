@@ -373,15 +373,16 @@ node test/schnittstelle.js
 node test/oberflaeche.js
 ```
 
-`schnittstelle.js` prüft die Datenschicht, 30 Prüfungen. Abgedeckt sind: beide Quellen erfüllen den Vertrag vollständig,
+`schnittstelle.js` prüft die Datenschicht, 37 Prüfungen — darunter beide
+Formate und beide Zeitfassungen der Daten. Abgedeckt sind: beide Quellen erfüllen den Vertrag vollständig,
 der Wechsel läuft ohne Sprung (größter Wertsprung pro Bild unter 1 bpm), die
 Schleife am Dateiende läuft ohne Ruck durch, CSV und JSON werden gleich
 interpretiert, und bei fehlender oder defekter Datei fällt die Anwendung sauber
 auf die Simulation zurück.
 
-`oberflaeche.js` prüft `js/ui.js` gegen einen minimalen DOM-Ersatz, 25
-Prüfungen: Verdrahtung der Buttons, Beschriftung, Sperren beim Umschalten und
-das Verhalten bei fehlender Datei.
+`oberflaeche.js` prüft `js/ui.js` gegen einen minimalen DOM-Ersatz, 33
+Prüfungen: Verdrahtung der Buttons, Beschriftung, Statusanzeige oben rechts
+und das Verhalten bei fehlender Datei.
 
 Beide Tests laden die echten Modul-Dateien in einen `vm`-Kontext und ersetzen
 nur `fetch` und das DOM. Es wird also der ausgelieferte Code geprüft, keine

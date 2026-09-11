@@ -135,8 +135,11 @@ function groessterSchritt(werte) {
          Math.abs(dq.puls - vorher) > 20);
   pruefe('Wiedergabe beginnt am ruhigen Anfang', auf.zeit < 6, auf.zeit.toFixed(1) + ' s');
 
-  console.log('\n--- Wiedergabe data/puls.json ---');
-  pruefe('300 Werte, 300 Sekunden', auf.werte.length === 300 && auf.dauer === 300);
+  console.log('\n--- Wiedergabe data/puls-kurz.csv (Standard) ---');
+  pruefe('72 Werte, 72 Sekunden', auf.werte.length === 72 && auf.dauer === 72,
+         auf.werte.length + ' Werte, ' + auf.dauer + ' s');
+  pruefe('Kommentarzeilen uebersprungen', auf.werte.every(Number.isFinite));
+  pruefe('Intervall aus der Zeitspalte erkannt', auf.intervall === 1);
 
   const vorSetz = dq.puls;
   dq.setzeZustand('stress');
@@ -165,33 +168,41 @@ function groessterSchritt(werte) {
   pruefe('Rueckwechsel zur Simulation', dq.wechseln('simulation') === true);
   pruefe('Laufzustand ueberlebt den Wechsel', dq.laeuft() === true);
 
-  console.log('\n--- Wiedergabe data/puls-kurz.csv ---');
-  const csv = laden(vonPlatte, '?aufzeichnung=data/puls-kurz.csv');
-  await csv.auf.laden();
+  // Der Standardfall oben deckt nur noch CSV ab. Die beiden langen Fassungen
+  // pruefen den JSON-Pfad und die ausfuehrliche CSV.
+  for (const [pfad, beschreibung] of [['data/puls.csv',  'lange CSV'],
+                                      ['data/puls.json', 'JSON']]) {
+    console.log('\n--- Wiedergabe ' + pfad + ' ---');
 
-  pruefe('CSV geladen', csv.auf.geladen === true,
-         csv.auf.werte.length + ' Werte, ' + csv.auf.dauer + ' s');
-  pruefe('Kommentarzeilen uebersprungen', csv.auf.werte.length === 72);
-  pruefe('Intervall aus der Zeitspalte erkannt', csv.auf.intervall === 1);
-  pruefe('nur Zahlen eingelesen', csv.auf.werte.every(Number.isFinite));
+    const lang = laden(vonPlatte, '?aufzeichnung=' + pfad);
+    await lang.auf.laden();
 
-  csv.dq.start();
-  csv.dq.wechseln('aufzeichnung');
+    pruefe(beschreibung + ' geladen: 300 Werte, 300 Sekunden',
+           lang.auf.werte.length === 300 && lang.auf.dauer === 300,
+           lang.auf.werte.length + ' Werte, ' + lang.auf.dauer + ' s');
+    pruefe(beschreibung + ': nur Zahlen eingelesen',
+           lang.auf.werte.every(Number.isFinite));
 
-  const csvProben = [];
-  let csvStress = false, csvRuhe = false;
+    lang.dq.start();
+    lang.dq.wechseln('aufzeichnung');
 
-  for (let i = 0; i < Math.round(160 / DT); i++) {     // gut zwei Durchlaeufe
-    csv.dq.update(DT);
-    csvProben.push(csv.dq.puls);
-    const z = csv.dq.getDaten().state;
-    if (z === 'stress') csvStress = true;
-    if (z === 'rest')   csvRuhe   = true;
+    const proben2 = [];
+    let sahStress2 = false, sahRuhe2 = false;
+
+    for (let i = 0; i < Math.round(620 / DT); i++) {   // gut zwei Durchlaeufe
+      lang.dq.update(DT);
+      proben2.push(lang.dq.puls);
+      const z = lang.dq.getDaten().state;
+      if (z === 'stress') sahStress2 = true;
+      if (z === 'rest')   sahRuhe2   = true;
+    }
+
+    pruefe(beschreibung + ': Wiedergabe erreicht beide Zustaende',
+           sahStress2 && sahRuhe2);
+    pruefe(beschreibung + ': Schleife laeuft ohne Ruck durch',
+           groessterSchritt(proben2) < 0.4,
+           'groesster Schritt ' + groessterSchritt(proben2).toFixed(3) + ' bpm/Bild');
   }
-
-  pruefe('CSV-Wiedergabe erreicht beide Zustaende', csvStress && csvRuhe);
-  pruefe('CSV-Schleife laeuft ohne Ruck durch', groessterSchritt(csvProben) < 0.4,
-         'groesster Schritt ' + groessterSchritt(csvProben).toFixed(3) + ' bpm/Bild');
 
   console.log('\n--- Fehlerfaelle ---');
   const fehlt = laden(nichtGefunden);
