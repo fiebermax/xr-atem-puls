@@ -13,6 +13,7 @@ const elRuhe         = document.getElementById('btn-ruhe');
 const elAnspannung   = document.getElementById('btn-anspannung');
 const elLive         = document.getElementById('btn-live');
 const elLiveStatus   = document.getElementById('live-status');
+const elTon          = document.getElementById('btn-ton');
 
 function zustandAnzeigen() {
   const daten = datenquelle.getDaten();
@@ -39,6 +40,8 @@ function zustandAnzeigen() {
 
   elLiveStatus.classList.toggle('stoerung', gestoert !== null);
   elLiveStatus.classList.toggle('an', an && !gestoert);
+
+  elTon.classList.toggle('aktiv', klang.an && klang.bereit);
 }
 
 // Schaltet die Wiedergabe der CSV-Werte ein und aus. wechseln() kann
@@ -67,6 +70,9 @@ elStart.addEventListener('click', () => {
   elStartbild.classList.add('weg');
   setTimeout(() => elStartbild.classList.add('versteckt'), 800);
 
+  // Browser lassen Audio erst nach einer Nutzergeste zu. Dieser Klick ist sie.
+  klang.aufbauen();
+
   elPuls.classList.remove('versteckt');
   elLiveStatus.classList.remove('versteckt');
   elLeiste.classList.remove('versteckt');
@@ -88,6 +94,11 @@ elAnspannung.addEventListener('click', () => zustandAnfordern('stress'));
 
 elLive.addEventListener('click', liveUmschalten);
 elLiveStatus.addEventListener('click', liveUmschalten);
+
+elTon.addEventListener('click', () => {
+  klang.umschalten();
+  zustandAnzeigen();
+});
 
 // Pulsanzeige aktualisieren
 setInterval(() => {

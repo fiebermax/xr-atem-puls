@@ -129,10 +129,12 @@
       <button id="btn-ruhe" class="aktiv">Ruhe</button>
       <button id="btn-anspannung">Anspannung</button>
       <button id="btn-live">Live Simulation</button>
+      <button id="btn-ton">Ton</button>
     </div>
 
-    <!-- XR-Szene -->
-    <a-scene>
+    <!-- XR-Szene. atem-klang haengt am Szenenwurzelelement, weil der Ton
+         nicht aus einer Richtung kommt, sondern den ganzen Raum fuellt. -->
+    <a-scene atem-klang>
       <a-assets>
         <a-asset-item id="lunge" src="models/lunge.glb"></a-asset-item>
       </a-assets>
@@ -181,6 +183,7 @@
     <script src="js/atmung.js"></script>
     <script src="js/himmel.js"></script>
     <script src="js/atem-echo.js"></script>
+    <script src="js/klang.js"></script>
     <script src="js/ui.js"></script>
   </body>
 </html>

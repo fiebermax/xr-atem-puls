@@ -1,0 +1,1029 @@
+01.09. 16:56 | Initial commit
+01.09. 16:58 | Projektstruktur angelegt
+03.09. 08:14 | A-Frame eingebunden, Grundszene mit Testwuerfel
+03.09. 10:27 | Hello World A-Frame Szene
+03.09. 10:59 | Lungenmodell eingebunden und skaliert
+07.09. 10:51 | Simulation, Atmungslogik und Bedienoberflaeche
+09.09. 08:17 | Zweite Datenquelle, Pivot-Korrektur und Szenenausbau
+09.09. 08:25 | Aufzeichnung als Startquelle, Ladefehler sichtbar machen
+09.09. 09:10 | README ausformuliert, Kommentarluecken geschlossen
+09.09. 09:19 | Fehlalarm am Quellen-Button behoben, UI-Test ergaenzt
+09.09. 13:31 | Aufzeichnung laeuft ab dem Start, keine gesperrten Buttons mehr
+09.09. 13:36 | Ein Button "Live Simulation", spielt data/puls.csv ab
+11.09. 07:58 | Kurze Datei als Standard, Statusanzeige oben rechts
+11.09. 07:59 | Tests an die neue Standarddatei angepasst
+11.09. 08:04 | Letzte Unstimmigkeiten vor der Abgabe 
+===== INDEX.HTML ===== 
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <title>XR Atem und Puls</title>
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; }
+
+      /* Randabdunklung. Nur am Bildschirm sichtbar, im Headset nicht,
+         weil DOM-Overlays dort nicht gerendert werden. */
+      #vignette {
+        position: fixed; inset: 0; z-index: 5; pointer-events: none;
+        background: radial-gradient(ellipse at center,
+                    rgba(0,0,0,0) 42%, rgba(0,0,0,0.5) 100%);
+      }
+
+      #pulsanzeige {
+        position: fixed; top: 18px; left: 18px; z-index: 10;
+        background: rgba(12,24,28,0.55);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.14);
+        color: #e6f0f2;
+        padding: 8px 16px; border-radius: 999px; font-size: 15px;
+        font-variant-numeric: tabular-nums;   /* Zahl zappelt nicht beim Wechsel */
+        letter-spacing: 0.02em;
+      }
+
+      /* Statusanzeige oben rechts: laeuft die Live Simulation gerade?
+         Ist zugleich Schalter, damit sie nicht nur meldet, sondern auch
+         schaltet. Der Punkt links traegt den Zustand. */
+      #live-status {
+        position: fixed; top: 18px; right: 18px; z-index: 10;
+        display: flex; align-items: center; gap: 9px;
+        background: rgba(12,24,28,0.55);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.14);
+        color: #e6f0f2;
+        padding: 8px 16px; border-radius: 999px;
+        font: inherit; font-size: 15px; cursor: pointer;
+        transition: border-color 0.25s;
+      }
+
+      #live-status:hover { border-color: rgba(255,255,255,0.34); }
+
+      #live-status::before {
+        content: ''; width: 9px; height: 9px; border-radius: 50%;
+        background: #6B7B84;                       /* aus */
+        transition: background 0.25s, box-shadow 0.25s;
+      }
+
+      #live-status.an::before {
+        background: #2E9E6B;                       /* an */
+        box-shadow: 0 0 0 3px rgba(46,158,107,0.25);
+      }
+
+      #live-status.stoerung::before { background: #C4703A; }
+      #live-status.stoerung { border-color: #C4703A; color: #F0B080; }
+
+      #bedienleiste {
+        position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+        z-index: 10; display: flex; gap: 8px;
+      }
+
+      #bedienleiste button {
+        border: 1px solid rgba(255,255,255,0.16);
+        background: rgba(12,24,28,0.55);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        color: #e6f0f2;
+        padding: 9px 20px; border-radius: 999px; font-size: 15px; cursor: pointer;
+        transition: background 0.25s, border-color 0.25s, color 0.25s;
+      }
+
+      #bedienleiste button:hover { border-color: rgba(255,255,255,0.34); }
+
+      #bedienleiste button.aktiv { background: #2E9E6B; color: #fff; border-color: #2E9E6B; }
+
+      /* Umschalter etwas absetzen, er gehoert nicht zur Zustandssteuerung */
+      #btn-live { margin-left: 12px; }
+
+      /* Datei nicht ladbar: sichtbar machen statt nur in der Konsole melden */
+      #btn-live.stoerung {
+        background: rgba(12,24,28,0.55); border-color: #C4703A; color: #F0B080;
+      }
+
+      #startbildschirm {
+        position: fixed; inset: 0; z-index: 20;
+        background: #0E1F22; color: #fff;   /* wie der untere Rand des Himmels */
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 10px;
+        transition: opacity 0.8s ease;
+      }
+
+      /* Weiches Ausblenden statt hartem Sprung in die Szene */
+      #startbildschirm.weg { opacity: 0; pointer-events: none; }
+
+      #startbildschirm h1 { font-size: 26px; font-weight: 600; margin: 0; }
+      #startbildschirm p  { color: #b8c4cc; margin: 0 0 14px 0; }
+
+      #startbildschirm button {
+        border: none; background: #2E9E6B; color: #fff;
+        padding: 10px 28px; border-radius: 16px; font-size: 16px; cursor: pointer;
+      }
+
+      .versteckt { display: none !important; }
+    </style>
+  </head>
+
+  <body>
+    <!-- Frame 0: Startbildschirm -->
+    <div id="startbildschirm">
+      <h1>Atem und Puls</h1>
+      <p>Ein Lungenmodell atmet im Rhythmus des simulierten Pulses.</p>
+      <button id="btn-los">Start</button>
+    </div>
+
+    <div id="vignette"></div>
+
+    <!-- Overlay: Pulsanzeige und Bedienleiste -->
+    <div id="pulsanzeige" class="versteckt">– bpm</div>
+
+    <button id="live-status" class="versteckt">Live Simulation: aus</button>
+
+    <div id="bedienleiste" class="versteckt">
+      <button id="btn-startstopp">Stopp</button>
+      <button id="btn-ruhe" class="aktiv">Ruhe</button>
+      <button id="btn-anspannung">Anspannung</button>
+      <button id="btn-live">Live Simulation</button>
+    </div>
+
+    <!-- XR-Szene -->
+    <a-scene>
+      <a-assets>
+        <a-asset-item id="lunge" src="models/lunge.glb"></a-asset-item>
+      </a-assets>
+
+      <!-- Himmelskugel mit Farbverlauf. Kein a-sky, weil dessen
+           Standardfarbe nicht zum eigenen Shader passt. -->
+      <a-entity id="himmel"
+                geometry="primitive: sphere; radius: 400; segmentsWidth: 32; segmentsHeight: 24"
+                material="shader: verlauf; side: back"
+                himmel-puls></a-entity>
+
+      <!-- Die Helligkeit schreibt atem-licht in jedem Bild neu,
+           der Wert hier ist nur der Ausgangspunkt. -->
+      <a-light type="ambient" intensity="0.6" atem-licht></a-light>
+      <a-light type="directional" intensity="0.5" position="-1 2 1"></a-light>
+
+      <!-- Boden. Neutral gehalten, damit er zur kuehlen wie zur
+           warmen Himmelsfarbe passt. -->
+      <a-circle position="0 0 -2" rotation="-90 0 0" radius="3" color="#141B1E"></a-circle>
+
+      <!-- Atemfuehrung: waechst und leuchtet im Takt des Modells. Zwei
+           Zentimeter ueber dem Boden, sonst flimmern die beiden Flaechen
+           gegeneinander. -->
+      <a-ring id="atemring" position="0 0.02 -2" rotation="-90 0 0"
+              radius-inner="0.60" radius-outer="0.66"
+              material="shader: flat; color: #3E8E7E; transparent: true; opacity: 0.3"
+              atem-ring></a-ring>
+
+      <!-- Aeusserer Container wird skaliert, inneres Modell wird zentriert -->
+      <a-entity id="lungenmodell" position="0 1.5 -2" atmung>
+        <a-entity id="lunge-inner"
+                  gltf-model="#lunge"
+                  modell-fix="zielhoehe: 1.47"></a-entity>
+      </a-entity>
+
+      <!-- Die Hoehe wirkt nur am Bildschirm. In VR ersetzt WebXR die
+           Kamerapose durch die Headset-Position ueber dem Boden. -->
+      <a-camera position="0 1.54 0"></a-camera>
+    </a-scene>
+
+    <!-- Schnittstelle und Umschalter zuerst, danach die Quellen -->
+    <script src="js/datenquelle.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/aufzeichnung.js"></script>
+    <script src="js/modell-fix.js"></script>
+    <script src="js/atmung.js"></script>
+    <script src="js/himmel.js"></script>
+    <script src="js/atem-echo.js"></script>
+    <script src="js/ui.js"></script>
+  </body>
+</html> 
+===== DATENQUELLE ===== 
+// Schnittstelle und Umschalter fuer Pulsdatenquellen (Muss-Kriterium M6).
+//
+// Die Anwendung spricht ausschliesslich dieses Modul an, nie eine Quelle
+// direkt. Dadurch laesst sich die Herkunft der Werte austauschen, ohne dass
+// Mapping, Animation oder Bedienoberflaeche davon etwas mitbekommen.
+//
+// SCHNITTSTELLE EINER QUELLE
+// Jede Quelle registriert sich mit datenquelle.registrieren(name, quelle)
+// und stellt bereit:
+//
+//   start()                 Wiedergabe beginnen
+//   stop()                  Wiedergabe anhalten, letzten Wert behalten
+//   setzeZustand(zustand)   'rest' oder 'stress' anfordern; eine Quelle mit
+//                           festem Verlauf darf das folgenlos ignorieren
+//   laeuft()      -> bool   laeuft die Quelle gerade
+//   update(dt)    -> Zahl   naechster Pulswert in bpm, dt in Sekunden
+//   getDaten()    -> Objekt { source, timestamp, heartRate, unit, state }
+//
+// Optional darf eine Quelle verfuegbar() anbieten. Meldet sie damit false,
+// verweigert der Umschalter den Wechsel und bleibt auf der bisherigen Quelle.
+//
+// Nicht Teil der Quellen-Schnittstelle ist anteil(). Das ist eine reine
+// Darstellungsgroesse und liegt deshalb hier, damit jede kuenftige Quelle
+// nur Rohwerte liefern muss.
+
+// Projektkonstante: Pulsbereich, auf den die Darstellung abbildet.
+// Beide Quellen richten sich danach.
+const BEREICH = { ruhe: 60, stress: 110 };
+
+// Sekunden, ueber die nach einem Quellenwechsel ueberblendet wird.
+const UEBERBLENDUNG = 2.5;
+
+const datenquelle = {
+  quellen: {},
+  aktiv: null,
+  name: null,
+
+  puls: BEREICH.ruhe,
+  bereich: BEREICH,
+
+  // Ueberblendung nach einem Wechsel
+  blendeVon: BEREICH.ruhe,
+  blendeRest: 0,
+
+  registrieren(name, quelle) {
+    this.quellen[name] = quelle;
+    if (!this.aktiv) {
+      this.aktiv = quelle;
+      this.name  = name;
+    }
+  },
+
+  // Wechselt die aktive Quelle. Gibt zurueck, ob der Wechsel geklappt hat.
+  wechseln(name) {
+    const neu = this.quellen[name];
+
+    if (!neu) {
+      console.warn('Datenquelle "' + name + '" ist nicht registriert.');
+      return false;
+    }
+    if (neu === this.aktiv) return true;
+
+    if (typeof neu.verfuegbar === 'function' && !neu.verfuegbar()) {
+      console.warn('Datenquelle "' + name + '" ist nicht verfuegbar, ' +
+                   'bleibe bei "' + this.name + '".');
+      return false;
+    }
+
+    // Laufzustand mitnehmen, damit der Wechsel die Wiedergabe nicht abbricht
+    const lief = this.aktiv.laeuft();
+
+    this.aktiv.stop();
+    this.aktiv = neu;
+    this.name  = name;
+    if (lief) neu.start();
+
+    // Ab dem letzten ausgegebenen Wert weiterblenden statt springen
+    this.blendeVon  = this.puls;
+    this.blendeRest = UEBERBLENDUNG;
+
+    return true;
+  },
+
+  // Meldet, ob die aktive Quelle auf setzeZustand reagiert. Eine Quelle mit
+  // festem Verlauf tut das nicht und sagt das ueber steuerbar: false.
+  steuerbar() {
+    return this.aktiv.steuerbar !== false;
+  },
+
+  start()               { this.aktiv.start(); },
+  stop()                { this.aktiv.stop(); },
+  setzeZustand(zustand) { this.aktiv.setzeZustand(zustand); },
+  laeuft()              { return this.aktiv.laeuft(); },
+  getDaten()            { return this.aktiv.getDaten(); },
+
+  update(deltaZeit) {
+    const roh = this.aktiv.update(deltaZeit);
+
+    if (this.blendeRest > 0) {
+      this.blendeRest = Math.max(0, this.blendeRest - deltaZeit);
+
+      // 0 direkt nach dem Wechsel, 1 am Ende der Ueberblendung
+      const x = 1 - this.blendeRest / UEBERBLENDUNG;
+      const weich = x * x * (3 - 2 * x);
+
+      this.puls = this.blendeVon + (roh - this.blendeVon) * weich;
+    } else {
+      this.puls = roh;
+    }
+
+    return this.puls;
+  },
+
+  // Meldet den Namen einer registrierten Quelle, die sich nicht aktivieren
+  // laesst, sonst null. Damit kann die Oberflaeche einen Ladefehler zeigen,
+  // statt ihn nur in die Konsole zu schreiben.
+  stoerung() {
+    for (const [name, quelle] of Object.entries(this.quellen)) {
+      if (typeof quelle.stoerung === 'function' && quelle.stoerung()) {
+        return name;
+      }
+    }
+    return null;
+  },
+
+  // Normierte Anspannung: 0 beim Ruhepuls, 1 beim Anspannungspuls.
+  // Gemeinsame Skala fuer Modellgroesse und Hintergrundfarbe.
+  anteil() {
+    const spanne = BEREICH.stress - BEREICH.ruhe;
+    return Math.min(1, Math.max(0, (this.puls - BEREICH.ruhe) / spanne));
+  }
+};
+ 
+===== SIMULATION ===== 
+// Datenquelle A: erzeugt einen plausiblen Herzfrequenzverlauf per Formel.
+//
+// Erfuellt die Quellen-Schnittstelle aus js/datenquelle.js und registriert
+// sich dort unter dem Namen "simulation". Sie ist die Standardquelle, weil
+// sie ohne Datei und ohne Server auskommt.
+
+// Aeusserste Grenzen, auf die der ausgegebene Wert geklemmt wird. Sie sind
+// bewusst weiter gefasst als die beiden Zielwerte unten: die natuerliche
+// Schwankung darf ueber 60 bzw. 110 bpm hinausgehen, ein unplausibler Wert
+// aber nicht.
+const HR_MIN = 50;
+const HR_MAX = 120;
+
+// Zielwerte der beiden Zustaende. Der Bereich liegt in datenquelle.js,
+// damit Formel, Aufzeichnung und Darstellung dieselbe Skala benutzen.
+const ZIELWERTE = {
+  rest:   datenquelle.bereich.ruhe,     // Zustand "Ruhe"
+  stress: datenquelle.bereich.stress    // Zustand "Anspannung"
+};
+
+const UEBERGANGSDAUER = 10;   // Sekunden fuer den vollen Bereich
+const SCHWANKUNG      = 2.5;  // maximale Abweichung in bpm
+
+const simulation = {
+  zustand: 'stopped',
+  letzterZustand: 'rest',
+  basispuls: ZIELWERTE.rest,   // geglaetteter Wert ohne Schwankung
+  puls: ZIELWERTE.rest,        // ausgegebener Wert inkl. Schwankung
+  rauschzeit: 0,
+
+  // Nimmt den Zustand von vor dem Stopp wieder auf.
+  start() {
+    this.zustand = this.letzterZustand;
+  },
+
+  // Der laufende Zustand wird gemerkt, damit Start dort weitermacht, wo
+  // Stopp aufgehoert hat, statt immer bei "Ruhe" zu beginnen.
+  stop() {
+    if (this.zustand !== 'stopped') this.letzterZustand = this.zustand;
+    this.zustand = 'stopped';
+  },
+
+  // Im Zustand "stopped" wirkungslos: erst starten, dann steuern.
+  setzeZustand(neuerZustand) {
+    if (this.zustand === 'stopped') return;
+    this.zustand = neuerZustand;
+  },
+
+  laeuft() {
+    return this.zustand !== 'stopped';
+  },
+
+  // Liefert das Datenobjekt der Schnittstelle (Dokumentation Kapitel 13)
+  getDaten() {
+    return {
+      source: 'simulation',
+      timestamp: Date.now(),
+      heartRate: Math.round(this.puls),
+      unit: 'bpm',
+      state: this.zustand
+    };
+  },
+
+  update(deltaZeit) {
+    if (!this.laeuft()) return this.puls;
+
+    // Gleitende Annaeherung an den Zielwert. UEBERGANGSDAUER gilt fuer den
+    // vollen Bereich HR_MIN bis HR_MAX. Der Weg von 60 auf 110 bpm ist nur
+    // ein Teil davon und dauert deshalb rund sieben statt zehn Sekunden.
+    const ziel = ZIELWERTE[this.zustand];
+    const schritt = (HR_MAX - HR_MIN) / UEBERGANGSDAUER * deltaZeit;
+
+    if (Math.abs(ziel - this.basispuls) <= schritt) {
+      this.basispuls = ziel;
+    } else {
+      this.basispuls += Math.sign(ziel - this.basispuls) * schritt;
+    }
+
+    // natuerliche Schwankung: zwei ueberlagerte langsame Schwingungen
+    this.rauschzeit += deltaZeit;
+    const rauschen =
+      Math.sin(this.rauschzeit * 0.7) * 0.6 +
+      Math.sin(this.rauschzeit * 2.3) * 0.4;
+
+    this.puls = this.basispuls + rauschen * SCHWANKUNG;
+    this.puls = Math.min(HR_MAX, Math.max(HR_MIN, this.puls));
+
+    return this.puls;
+  }
+};
+
+datenquelle.registrieren('simulation', simulation);
+ 
+===== AUFZEICHNUNG ===== 
+// Datenquelle B: spielt eine aufgezeichnete Pulsreihe aus einer Datei ab.
+//
+// Erfuellt dieselbe Quellen-Schnittstelle wie js/simulation.js und
+// registriert sich in js/datenquelle.js unter dem Namen "aufzeichnung".
+//
+// Diese Datei ist der eigentliche Austauschpunkt fuer Muss-Kriterium M6:
+// Wer spaeter echte Sensordaten anbinden will, ersetzt hier das Laden der
+// Datei durch den Sensorstrom. Alles andere in der Anwendung bleibt gleich.
+//
+// UNTERSTUETZTE FORMATE
+// Beide werden auf dieselbe interne Form gebracht, danach ist der Rest
+// des Moduls formatunabhaengig.
+//
+//   .json   { "intervall": 1, "einheit": "bpm", "werte": [ 62, 61, ... ] }
+//   .csv    Kopfzeile mit den Spalten "zeit" und "puls", eine Probe je
+//           Zeile. Zeilen mit # am Anfang gelten als Kommentar.
+//
+// CSV kann mit, JSON ohne Umweg gelesen werden. Beides ist absichtlich
+// dabei, weil Exporte echter Brustgurte und Uhren in aller Regel CSV sind.
+//
+// Hinweis: die Werte in data/ sind erzeugt, keine echten Messdaten.
+
+// Standardpfad. Ohne Codeaenderung per Adresszeile umstellbar, etwa auf den
+// langen Verlauf:  http://localhost:5500/?aufzeichnung=data/puls.csv
+const PFAD = new URLSearchParams(location.search).get('aufzeichnung')
+          || 'data/puls-kurz.csv';
+
+// Schwellen fuer die Ableitung des Zustands aus dem Pulswert. Der Abstand
+// zwischen beiden verhindert Flackern, wenn der Wert an der Grenze pendelt.
+const SCHWELLE_STRESS = 90;
+const SCHWELLE_RUHE   = 80;
+
+const aufzeichnung = {
+  // Der Verlauf steht in der Datei fest, setzeZustand bleibt wirkungslos.
+  // Die Bedienoberflaeche liest das und wechselt bei Ruhe oder Anspannung
+  // von sich aus zur steuerbaren Quelle, statt die Buttons tot zu lassen.
+  steuerbar: false,
+
+  werte: [],
+  intervall: 1,
+  dauer: 0,      // Sekunden fuer einen Durchlauf
+  zeit: 0,       // Abspielposition in Sekunden
+
+  zustand: 'stopped',
+  puls: 60,
+
+  geladen: false,
+  fehler: null,
+
+  laden() {
+    return fetch(PFAD)
+      .then(antwort => {
+        if (!antwort.ok) throw new Error('HTTP ' + antwort.status);
+        return antwort.text();
+      })
+      .then(text => {
+        const datei = PFAD.toLowerCase().endsWith('.csv')
+          ? this.ausCsv(text)
+          : JSON.parse(text);
+
+        this.uebernehmen(datei);
+
+        console.log('Aufzeichnung "' + PFAD + '" geladen: ' + this.werte.length +
+                    ' Werte, ' + Math.round(this.dauer) + ' Sekunden.');
+      })
+      .catch(fehler => {
+        this.fehler = fehler.message;
+        console.error('Aufzeichnung "' + PFAD + '" nicht ladbar: ' +
+                      fehler.message + '. Die Anwendung bleibt bei der Simulation.');
+      });
+  },
+
+  // Liest CSV in dieselbe Form, die die JSON-Datei direkt mitbringt.
+  ausCsv(text) {
+    const zeilen = text.split(/\r?\n/)
+      .map(z => z.trim())
+      .filter(z => z !== '' && z[0] !== '#');   // Leerzeilen und Kommentare weg
+
+    if (zeilen.length < 2) throw new Error('CSV enthaelt keine Datenzeilen');
+
+    const kopf  = zeilen.shift().split(',').map(s => s.trim().toLowerCase());
+    const iPuls = kopf.indexOf('puls');
+    const iZeit = kopf.indexOf('zeit');
+
+    if (iPuls < 0) throw new Error('CSV braucht eine Spalte "puls"');
+
+    const zeiten = [];
+    const werte = zeilen.map(zeile => {
+      const felder = zeile.split(',');
+      if (iZeit >= 0) zeiten.push(parseFloat(felder[iZeit]));
+      return parseFloat(felder[iPuls]);
+    });
+
+    // Abstand aus den ersten beiden Zeitstempeln. Ohne Zeitspalte wird
+    // eine Probe pro Sekunde angenommen.
+    const intervall = zeiten.length > 1 ? zeiten[1] - zeiten[0] : 1;
+
+    return { intervall, einheit: 'bpm', werte };
+  },
+
+  uebernehmen(datei) {
+    if (!Array.isArray(datei.werte) || datei.werte.length < 2) {
+      throw new Error('Feld "werte" fehlt oder enthaelt zu wenige Eintraege');
+    }
+    if (!datei.werte.every(Number.isFinite)) {
+      throw new Error('Feld "werte" enthaelt Eintraege, die keine Zahl sind');
+    }
+
+    this.werte     = datei.werte;
+    this.intervall = datei.intervall > 0 ? datei.intervall : 1;
+    this.dauer     = this.werte.length * this.intervall;
+    this.puls      = this.werte[0];
+    this.geladen   = true;
+  },
+
+  // Der Umschalter fragt das ab und verweigert den Wechsel, wenn die
+  // Datei fehlt oder kaputt ist.
+  verfuegbar() {
+    return this.geladen;
+  },
+
+  // Grund, falls das Laden fehlgeschlagen ist, sonst null. Bewusst getrennt
+  // von verfuegbar(): waehrend der fetch noch laeuft, ist die Quelle nicht
+  // verfuegbar, aber auch nicht gestoert. Ohne diese Unterscheidung meldet
+  // die Bedienleiste beim Start einen Fehler, den es gar nicht gibt.
+  stoerung() {
+    return this.fehler;
+  },
+
+  // Beginnt den Verlauf wieder am ruhigen Anfang, damit jede Vorfuehrung
+  // denselben Bogen zeigt.
+  start() {
+    this.zustand = 'rest';
+    this.zeit = 0;
+  },
+
+  stop() {
+    this.zustand = 'stopped';
+  },
+
+  // Ohne Wirkung: der Verlauf steht in der Datei fest. Die Methode gehoert
+  // trotzdem zur Schnittstelle, damit die Bedienoberflaeche nicht wissen
+  // muss, welche Quelle gerade aktiv ist.
+  setzeZustand() {},
+
+  laeuft() {
+    return this.zustand !== 'stopped';
+  },
+
+  getDaten() {
+    return {
+      source: 'aufzeichnung',
+      timestamp: Date.now(),
+      heartRate: Math.round(this.puls),
+      unit: 'bpm',
+      state: this.zustand
+    };
+  },
+
+  update(deltaZeit) {
+    if (!this.laeuft() || !this.geladen) return this.puls;
+
+    // Am Ende der Aufzeichnung von vorn beginnen
+    this.zeit = (this.zeit + deltaZeit) % this.dauer;
+
+    // Index aus der verstrichenen Zeit rechnen und zwischen den beiden
+    // benachbarten Werten interpolieren, damit der Verlauf nicht stuft.
+    const genau  = this.zeit / this.intervall;
+    const index  = Math.floor(genau);
+    const anteil = genau - index;
+
+    const a = this.werte[index];
+    const b = this.werte[(index + 1) % this.werte.length];   // Uebergang in die Schleife
+
+    this.puls = a + (b - a) * anteil;
+    this.zustand = this.zustandAus(this.puls);
+
+    return this.puls;
+  },
+
+  // Die Datei enthaelt nur Pulswerte, der Zustand wird daraus abgeleitet.
+  zustandAus(bpm) {
+    if (this.zustand === 'stress') {
+      return bpm < SCHWELLE_RUHE ? 'rest' : 'stress';
+    }
+    return bpm > SCHWELLE_STRESS ? 'stress' : 'rest';
+  }
+};
+
+datenquelle.registrieren('aufzeichnung', aufzeichnung);
+
+// Laden und danach gleich aktiv schalten: die Werte sollen von Anfang an aus
+// der Datei kommen, damit der Puls durchgehend wandert statt zwischen zwei
+// festen Stufen zu stehen. Schlaegt das Laden fehl, lehnt wechseln() ab und
+// es bleibt bei der Simulation.
+aufzeichnung.laden().then(() => datenquelle.wechseln('aufzeichnung'));
+ 
+===== ATMUNG ===== 
+// Bildet die Herzfrequenz auf das Lungenmodell ab.
+// Zwei Effekte: Grundgroesse folgt dem Puls (hoch = zusammengezogen),
+// darueber liegt eine minimale Atembewegung.
+
+AFRAME.registerComponent('atmung', {
+  schema: {
+    // Grundgroesse bei Ruhepuls bzw. bei Anspannungspuls
+    groesseRuhe:   { type: 'number', default: 1.00 },
+    groesseStress: { type: 'number', default: 0.75 },
+
+    // Staerke der Atembewegung bei niedrigem bzw. hohem Puls
+    hubRuhe:   { type: 'number', default: 0.046 },
+    hubStress: { type: 'number', default: 0.014 },
+
+    // Faktor auf die Atemfrequenz aus Kapitel 11.6.2. 1.0 entspricht der
+    // dort dokumentierten Formel, hoehere Werte lassen schneller atmen.
+    tempo: { type: 'number', default: 1.25 }
+  },
+
+  init: function () {
+    this.phase = 0;
+
+    // 0 beim vollen Ausatmen, 1 beim vollen Einatmen. Licht und Bodenring
+    // lesen diesen Wert, damit die ganze Szene in einem Takt laeuft.
+    this.atemwert = 0.5;
+  },
+
+  // Laeuft nach init und bei jeder Wertaenderung zur Laufzeit.
+  update: function () {
+    this.anwenden();
+  },
+
+  tick: function (time, timeDelta) {
+    // Nach einem Tabwechsel liefert timeDelta sehr grosse Werte.
+    const dt = Math.min(timeDelta / 1000, 0.1);
+
+    if (datenquelle.laeuft()) {
+      const bpm = datenquelle.update(dt);
+
+      // Atemfrequenz laut Dokumentation Kapitel 11.6.2, mal Tempofaktor
+      const atemfrequenz = (6 + (bpm - 50) * 0.2) * this.data.tempo;
+      this.phase += dt * (atemfrequenz / 60) * Math.PI * 2;
+    }
+
+    // Auch im Zustand "stopped" anwenden, damit die eingestellte
+    // Groesse sichtbar bleibt statt einzufrieren.
+    this.anwenden();
+  },
+
+  anwenden: function () {
+    // 0 beim Ruhepuls, 1 beim Anspannungspuls. Frueher lag die Skala bei
+    // 50 bis 120 bpm - Werte, welche die Simulation nie erreicht. Dadurch
+    // kamen nur rund 72 Prozent der eingestellten Spanne an.
+    const t = datenquelle.anteil();
+
+    // Grundgroesse: schrumpft mit steigendem Puls
+    const grund = this.data.groesseRuhe +
+                  (this.data.groesseStress - this.data.groesseRuhe) * t;
+
+    // Atemhub: wird flacher mit steigendem Puls
+    const hub = this.data.hubRuhe +
+                (this.data.hubStress - this.data.hubRuhe) * t;
+
+    const schwingung = Math.sin(this.phase);
+    this.atemwert = (schwingung + 1) / 2;
+
+    this.el.object3D.scale.setScalar(grund * (1 + schwingung * hub));
+  }
+});
+ 
+===== MODELL-FIX ===== 
+// Zentriert ein geladenes glTF-Modell um seinen Ursprung
+// und skaliert es auf eine Zielhoehe. Loest das "Klopfen"
+// bei Modellen mit versetztem Pivot.
+
+AFRAME.registerComponent('modell-fix', {
+  schema: {
+    zielhoehe: { type: 'number', default: 0.6 }   // Meter
+  },
+
+  init: function () {
+    this.rohGroesse = null;   // Rohmasse des Modells, unskaliert
+    this.rohMitte   = null;
+
+    this.el.addEventListener('model-loaded', () => {
+      this.messen();
+      this.anwenden();
+    });
+  },
+
+  // Laeuft, wenn die Zielhoehe zur Laufzeit geaendert wird.
+  update: function () {
+    if (this.rohGroesse) this.anwenden();
+  },
+
+  // Misst das Modell in seinem EIGENEN Koordinatensystem.
+  messen: function () {
+    const objekt = this.el.getObject3D('mesh');
+    if (!objekt) return;
+
+    objekt.position.set(0, 0, 0);
+    objekt.scale.setScalar(1);
+
+    // Box3.setFromObject misst in Weltkoordinaten. Solange das Modell im
+    // Szenengraph haengt, stecken Position und Skalierung aller Eltern mit
+    // drin - hier also die 0 1.5 -2 des Containers. Deshalb kurz aushaengen,
+    // messen, wieder einhaengen. Ohne Eltern ist Weltraum gleich lokaler Raum.
+    const elternteil = objekt.parent;
+    if (elternteil) elternteil.remove(objekt);
+
+    const box = new THREE.Box3().setFromObject(objekt);
+
+    if (elternteil) elternteil.add(objekt);
+
+    this.rohGroesse = box.getSize(new THREE.Vector3());
+    this.rohMitte   = box.getCenter(new THREE.Vector3());
+  },
+
+  // Skaliert auf die Zielhoehe und schiebt den Mittelpunkt auf den Ursprung.
+  // Danach liegt die Modellmitte exakt im Ursprung des Containers, sodass
+  // dessen Skalierung das Modell um die Mitte dehnt statt es zu verschieben.
+  anwenden: function () {
+    const objekt = this.el.getObject3D('mesh');
+    if (!objekt || !this.rohGroesse || this.rohGroesse.y === 0) return;
+
+    const faktor = this.data.zielhoehe / this.rohGroesse.y;
+
+    objekt.scale.setScalar(faktor);
+    objekt.position.set(
+      -this.rohMitte.x * faktor,
+      -this.rohMitte.y * faktor,
+      -this.rohMitte.z * faktor
+    );
+  }
+});
+ 
+===== HIMMEL ===== 
+// Hintergrund: senkrechter Farbverlauf, dessen Farben dem Puls folgen.
+// Ruhe = kuehles Blaugruen, Anspannung = entsaettigtes Warmgrau.
+// Der Uebergang braucht dieselben rund 10 Sekunden wie die Groessenaenderung,
+// weil beide am selben Pulswert aus js/datenquelle.js haengen.
+
+// Eigener Shader: zwei Farben, senkrecht ineinander geblendet. A-Frame
+// bringt keinen Verlaufs-Shader mit, deshalb hier von Hand.
+AFRAME.registerShader('verlauf', {
+  schema: {
+    farbeOben:  { type: 'color',  default: '#20454C', is: 'uniform' },
+    farbeUnten: { type: 'color',  default: '#0E1F22', is: 'uniform' },
+
+    // Breite des Uebergangs. 0 gibt eine harte Kante am Horizont,
+    // 1 blendet ueber die gesamte Kugel.
+    weichheit:  { type: 'number', default: 0.9,       is: 'uniform' }
+  },
+
+  vertexShader: `
+    varying vec3 vPos;
+
+    void main() {
+      vPos = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+
+  fragmentShader: `
+    uniform vec3  farbeOben;
+    uniform vec3  farbeUnten;
+    uniform float weichheit;
+    varying vec3  vPos;
+
+    void main() {
+      // -1 am Boden der Kugel, +1 am Scheitel
+      float hoehe = normalize(vPos).y;
+      float t = smoothstep(-weichheit, weichheit, hoehe);
+
+      vec3 farbe = mix(farbeUnten, farbeOben, t);
+
+      // three.js rechnet Farben intern linear. Ohne diese Umrechnung
+      // in den sRGB-Raum wirkt der Himmel deutlich zu dunkel.
+      farbe = pow(farbe, vec3(1.0 / 2.2));
+
+      gl_FragColor = vec4(farbe, 1.0);
+    }
+  `
+});
+
+// Blendet die beiden Verlaufsfarben zwischen Ruhe und Anspannung.
+AFRAME.registerComponent('himmel-puls', {
+  schema: {
+    ruheOben:    { type: 'color', default: '#20454C' },
+    ruheUnten:   { type: 'color', default: '#0E1F22' },
+    stressOben:  { type: 'color', default: '#46352F' },
+    stressUnten: { type: 'color', default: '#241A1A' }
+  },
+
+  init: function () {
+    // Zwei Farbobjekte zum Wiederverwenden. In tick jedes Bild neue
+    // anzulegen waere unnoetiger Muell fuer die Speicherbereinigung.
+    this.oben  = new THREE.Color();
+    this.unten = new THREE.Color();
+  },
+
+  // Die vier Eckfarben einmal umrechnen statt in jedem Bild. THREE.Color
+  // wandelt den Hexwert dabei in den linearen Arbeitsfarbraum um, was fuer
+  // das Mischen mit lerp auch der richtige Raum ist.
+  update: function () {
+    this.ruheOben    = new THREE.Color(this.data.ruheOben);
+    this.ruheUnten   = new THREE.Color(this.data.ruheUnten);
+    this.stressOben  = new THREE.Color(this.data.stressOben);
+    this.stressUnten = new THREE.Color(this.data.stressUnten);
+  },
+
+  tick: function () {
+    const mesh = this.el.getObject3D('mesh');
+    if (!mesh || !mesh.material.uniforms) return;
+
+    // Nur lesen. datenquelle.update() ruft ausschliesslich die atmung-
+    // Component auf, sonst liefe die Simulation doppelt so schnell.
+    const t = datenquelle.anteil();
+
+    this.oben.copy(this.ruheOben).lerp(this.stressOben, t);
+    this.unten.copy(this.ruheUnten).lerp(this.stressUnten, t);
+
+    mesh.material.uniforms.farbeOben.value.copy(this.oben);
+    mesh.material.uniforms.farbeUnten.value.copy(this.unten);
+  }
+});
+ 
+===== ATEM-ECHO ===== 
+// Die Szene atmet mit: Umgebungslicht und Bodenring folgen demselben
+// Atemzyklus wie das Modell. Beide lesen den Wert aus der atmung-Component,
+// damit es nur einen Takt gibt und nichts auseinanderlaeuft.
+
+// Die Klammer haelt die Hilfsfunktion unten aus dem gemeinsamen Namensraum
+// heraus. Klassische Scripts teilen sich einen, ein zweites atmungHolen in
+// einer anderen Datei wuerde sonst zum Konflikt.
+(function () {
+
+  // Sucht die atmung-Component einmalig und merkt sie sich. Ein
+  // querySelector pro Bild waere im Headset spuerbar teuer.
+  function atmungHolen(component) {
+    if (component.atmung) return component.atmung;
+
+    const traeger = component.el.sceneEl.querySelector('[atmung]');
+    if (traeger && traeger.components.atmung) {
+      component.atmung = traeger.components.atmung;
+    }
+    return component.atmung;
+  }
+
+  // Helligkeit des Umgebungslichts folgt dem Atemzug.
+  AFRAME.registerComponent('atem-licht', {
+    schema: {
+      grund:  { type: 'number', default: 0.45 },   // beim Ausatmen
+      spanne: { type: 'number', default: 0.25 }    // Zunahme beim Einatmen
+    },
+
+    tick: function () {
+      const atmung = atmungHolen(this);
+      if (!atmung) return;
+
+      // Direkt auf das three.js-Licht schreiben statt ueber setAttribute:
+      // spart das Parsen des Attributstrings in jedem Frame.
+      const licht = this.el.getObject3D('light');
+      if (!licht) return;
+
+      licht.intensity = this.data.grund + atmung.atemwert * this.data.spanne;
+    }
+  });
+
+  // Ring am Boden als Atemfuehrung: waechst und leuchtet mit dem Einatmen.
+  AFRAME.registerComponent('atem-ring', {
+    schema: {
+      spanne:          { type: 'number', default: 0.12 },  // Groessenhub
+      deckkraftGrund:  { type: 'number', default: 0.18 },
+      deckkraftSpanne: { type: 'number', default: 0.30 }
+    },
+
+    tick: function () {
+      const atmung = atmungHolen(this);
+      if (!atmung) return;
+
+      // atemwert laeuft von 0 bis 1, hier gebraucht als -1 bis 1
+      const schwingung = atmung.atemwert * 2 - 1;
+
+      this.el.object3D.scale.setScalar(1 + schwingung * this.data.spanne);
+
+      const mesh = this.el.getObject3D('mesh');
+      if (mesh) {
+        mesh.material.opacity =
+          this.data.deckkraftGrund + atmung.atemwert * this.data.deckkraftSpanne;
+      }
+    }
+  });
+
+})();
+ 
+===== UI ===== 
+// Bedienoberflaeche: ruft ausschliesslich Zustandsfunktionen auf.
+//
+// Spricht nie eine Quelle direkt an, sondern immer den Umschalter in
+// js/datenquelle.js. Deshalb aendert sich an dieser Datei nichts, wenn
+// eine weitere Quelle dazukommt - nur die Beschriftung unten waechst mit.
+
+const elStart        = document.getElementById('btn-los');
+const elStartbild    = document.getElementById('startbildschirm');
+const elPuls         = document.getElementById('pulsanzeige');
+const elLeiste       = document.getElementById('bedienleiste');
+const elStartStopp   = document.getElementById('btn-startstopp');
+const elRuhe         = document.getElementById('btn-ruhe');
+const elAnspannung   = document.getElementById('btn-anspannung');
+const elLive         = document.getElementById('btn-live');
+const elLiveStatus   = document.getElementById('live-status');
+
+function zustandAnzeigen() {
+  const daten = datenquelle.getDaten();
+
+  elRuhe.classList.toggle('aktiv', daten.state === 'rest');
+  elAnspannung.classList.toggle('aktiv', daten.state === 'stress');
+  elStartStopp.textContent = datenquelle.laeuft() ? 'Stopp' : 'Start';
+
+  // Ein fehlgeschlagener Ladeversuch darf nicht nur in der Konsole stehen,
+  // sonst wirkt ein abgelehnter Klick wie ein toter Button.
+  const gestoert = datenquelle.stoerung();
+  const an       = datenquelle.name === 'aufzeichnung';
+
+  elLive.textContent = gestoert ? 'Live Simulation: Datei fehlt'
+                                : 'Live Simulation';
+  elLive.classList.toggle('stoerung', gestoert !== null);
+  elLive.classList.toggle('aktiv', an);
+
+  // Anzeige oben rechts. Sagt in Worten, was die gruene Markierung unten
+  // in der Leiste nur farblich zeigt.
+  elLiveStatus.textContent = gestoert
+    ? 'Live Simulation: Datei fehlt'
+    : 'Live Simulation: ' + (an ? 'an' : 'aus');
+
+  elLiveStatus.classList.toggle('stoerung', gestoert !== null);
+  elLiveStatus.classList.toggle('an', an && !gestoert);
+}
+
+// Schaltet die Wiedergabe der CSV-Werte ein und aus. wechseln() kann
+// ablehnen, etwa wenn die Datei nicht geladen wurde. Die Anzeige wird
+// deshalb immer aus dem tatsaechlichen Zustand neu gesetzt und nie aus der
+// Annahme, der Klick haette gewirkt.
+function liveUmschalten() {
+  datenquelle.wechseln(
+    datenquelle.name === 'aufzeichnung' ? 'simulation' : 'aufzeichnung'
+  );
+  zustandAnzeigen();
+}
+
+// Ruhe und Anspannung. Laeuft gerade die Aufzeichnung, reagiert die nicht auf
+// setzeZustand - dann wird zuerst auf die steuerbare Quelle gewechselt. Wer
+// Anspannung drueckt, will Anspannung sehen und nicht einen toten Button.
+function zustandAnfordern(zustand) {
+  if (!datenquelle.steuerbar()) datenquelle.wechseln('simulation');
+  datenquelle.setzeZustand(zustand);
+  zustandAnzeigen();
+}
+
+elStart.addEventListener('click', () => {
+  // Erst ausblenden, danach aus dem Layout nehmen. Die Bedienelemente
+  // liegen schon darunter bereit und werden vom Verlauf freigelegt.
+  elStartbild.classList.add('weg');
+  setTimeout(() => elStartbild.classList.add('versteckt'), 800);
+
+  elPuls.classList.remove('versteckt');
+  elLiveStatus.classList.remove('versteckt');
+  elLeiste.classList.remove('versteckt');
+  datenquelle.start();
+  zustandAnzeigen();
+});
+
+elStartStopp.addEventListener('click', () => {
+  if (datenquelle.laeuft()) {
+    datenquelle.stop();
+  } else {
+    datenquelle.start();
+  }
+  zustandAnzeigen();
+});
+
+elRuhe.addEventListener('click',       () => zustandAnfordern('rest'));
+elAnspannung.addEventListener('click', () => zustandAnfordern('stress'));
+
+elLive.addEventListener('click', liveUmschalten);
+elLiveStatus.addEventListener('click', liveUmschalten);
+
+// Pulsanzeige aktualisieren
+setInterval(() => {
+  elPuls.textContent = datenquelle.laeuft()
+    ? Math.round(datenquelle.puls) + ' bpm'
+    : '– bpm';
+
+  // Bei der Aufzeichnung wechselt der Zustand ohne Klick, weil er aus der
+  // Datei abgeleitet wird. Die Anzeige muss deshalb mitziehen.
+  zustandAnzeigen();
+}, 200);
+
+zustandAnzeigen();
