@@ -259,8 +259,9 @@ wären 120 DOM-Zugriffe pro Sekunde — am Desktop unauffällig, im Headset nich
 
 ### `js/ui.js`
 Bedienoberfläche. Spricht ausschließlich mit `datenquelle`, nie mit einer
-Quelle direkt. Deshalb ändert sich hier nichts, wenn eine weitere Quelle
-dazukommt — nur die Anzeigenamen in `QUELLENNAMEN` wachsen mit.
+Quelle direkt. Die einzige Stelle, die Quellen beim Namen nennt, ist
+`liveUmschalten()` — dort steht, zwischen welchen beiden der Live-Button
+schaltet.
 
 Zeigt außerdem an, wenn sich eine Quelle nicht aktivieren lässt. Ohne das stünde
 ein abgelehnter Wechsel nur in der Konsole und der Button wirkte tot.
@@ -389,10 +390,10 @@ nur `fetch` und das DOM. Es wird also der ausgelieferte Code geprüft, keine
 Kopie davon.
 
 Die Trennung hat einen konkreten Anlass: ein Fehler lag genau zwischen beiden
-Schichten. Der Quellen-Button meldete beim Start „Aufzeichnung fehlt", obwohl
-die Datei einwandfrei lud — `zustandAnzeigen()` läuft synchron, da war der
-`fetch` noch unterwegs. Die Datenschicht war fehlerfrei, sichtbar wurde es erst
-mit einem DOM.
+Schichten. Der Live-Button meldete beim Start, die Datei fehle, obwohl sie
+einwandfrei lud — `zustandAnzeigen()` läuft synchron, da war der `fetch` noch
+unterwegs, und „lädt noch" war nicht von „ist kaputt" unterschieden. Die
+Datenschicht war fehlerfrei, sichtbar wurde es erst mit einem DOM.
 
 ---
 

@@ -1,10 +1,9 @@
 // Prueft js/ui.js gegen einen minimalen DOM-Ersatz.
 //
 // Die Schnittstellenpruefung in test/schnittstelle.js deckt die Datenschicht
-// ab. Genau dazwischen lag ein Fehler: der Quellen-Button meldete beim Start
-// "Aufzeichnung fehlt", obwohl die Datei einwandfrei lud - zustandAnzeigen()
-// laeuft synchron, da war der fetch noch unterwegs. Diese Datei schliesst
-// diese Luecke.
+// ab. Genau dazwischen lag ein Fehler: der Live-Button meldete beim Start,
+// die Datei fehle, obwohl sie einwandfrei lud - zustandAnzeigen() laeuft
+// synchron, da war der fetch noch unterwegs. Diese Datei schliesst die Luecke.
 //
 // Aufruf aus dem Projektordner:   node test/oberflaeche.js
 
