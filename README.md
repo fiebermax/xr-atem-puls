@@ -53,6 +53,7 @@ Das funktioniert mit jeder Datei im Ordner `data/`, auch mit der JSON-Fassung.
 | **Anspannung** | Steuert auf 110 bpm, ebenso. |
 | **Live Simulation** (unten) | Spielt die Werte aus `data/puls-kurz.csv` ab. Grün markiert, solange sie läuft. Nochmal drücken schaltet zurück auf die Formel. |
 | **Live Simulation: an / aus** (oben rechts) | Sagt in Worten, ob die Wiedergabe gerade läuft. Der Punkt links ist grün, wenn ja. Schaltet auf Klick genauso um. |
+| **Ton** | Schaltet den Atemklang stumm. Grün markiert, solange er an ist. |
 
 **Die Live Simulation läuft ab dem Start.** Die Werte kommen sofort aus
 `data/puls-kurz.csv` und wandern durchgehend zwischen 56 und 117 bpm — der Puls
@@ -77,9 +78,9 @@ Es bewegen sich vier Dinge, aber nur auf **zwei Zeitachsen**. Das ist der
 Grund, warum die Szene zusammenhängend wirkt und nicht wie eine
 Effektsammlung.
 
-**Atemzyklus, etwa 6 Sekunden** — Modellgröße, Umgebungslicht und Bodenring
-schwingen gemeinsam. Der Hub ist mit ±4,6 % bewusst klein: es soll atmen, nicht
-pochen.
+**Atemzyklus, etwa 6 Sekunden** — Modellgröße, Umgebungslicht, Bodenring und
+Klang schwingen gemeinsam. Der Hub ist mit ±4,6 % bewusst klein: es soll atmen,
+nicht pochen.
 
 **Anspannung, etwa 10 Sekunden** — Grundgröße des Modells und Himmelsfarbe
 folgen dem geglätteten Puls. Das ist der eigentliche Effekt: hoher Puls =
@@ -257,6 +258,21 @@ Beide holen sich die `atmung`-Component **einmal** und schreiben danach direkt
 auf die three.js-Objekte. Ein `querySelector` und ein `setAttribute` pro Bild
 wären 120 DOM-Zugriffe pro Sekunde — am Desktop unauffällig, im Headset nicht.
 
+### `js/klang.js`
+Ein ruhiger Ton, der mit dem Modell atmet. Dritter Abnehmer desselben Taktes
+neben Licht und Bodenring.
+
+Erzeugt statt einer Audiodatei zwei leicht gegeneinander verstimmte Sinustöne.
+Die Verstimmung ergibt eine langsame Schwebung, das klingt wärmer als ein
+einzelner Ton — und es braucht keine externe Datei, also auch keine
+Lizenzangabe in der Dokumentation. Beim Einatmen wird der Ton lauter und der
+Tiefpass öffnet sich, mit steigender Anspannung hebt sich die Tonhöhe um knapp
+einen Ganzton.
+
+Browser lassen Audio erst nach einer Nutzergeste zu. Der Klick auf **Start**
+ist diese Geste, dort wird der AudioContext aufgebaut. Steht kein Web Audio zur
+Verfügung, bleibt es still und die Anwendung läuft unverändert weiter.
+
 ### `js/ui.js`
 Bedienoberfläche. Spricht ausschließlich mit `datenquelle`, nie mit einer
 Quelle direkt. Die einzige Stelle, die Quellen beim Namen nennt, ist
@@ -381,9 +397,10 @@ Schleife am Dateiende läuft ohne Ruck durch, CSV und JSON werden gleich
 interpretiert, und bei fehlender oder defekter Datei fällt die Anwendung sauber
 auf die Simulation zurück.
 
-`oberflaeche.js` prüft `js/ui.js` gegen einen minimalen DOM-Ersatz, 33
-Prüfungen: Verdrahtung der Buttons, Beschriftung, Statusanzeige oben rechts
-und das Verhalten bei fehlender Datei.
+`oberflaeche.js` prüft `js/ui.js` und `js/klang.js` gegen einen minimalen
+DOM-Ersatz, 45 Prüfungen: Verdrahtung der Buttons, Beschriftung, Statusanzeige
+oben rechts, das Verhalten bei fehlender Datei und ob der Klang dem Atemzug
+folgt — letzteres über eine Web-Audio-Attrappe, es wird nichts hörbar.
 
 Beide Tests laden die echten Modul-Dateien in einen `vm`-Kontext und ersetzen
 nur `fetch` und das DOM. Es wird also der ausgelieferte Code geprüft, keine

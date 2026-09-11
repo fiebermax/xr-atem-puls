@@ -222,16 +222,14 @@ function pruefe(name, bedingung, zusatz) {
          b.dq.name === 'simulation');
   pruefe('Ruhe bleibt bedienbar', b.el['btn-ruhe'].disabled === false);
 
-  console.log('
---- Klang ohne Web Audio ---');
+  console.log('\n--- Klang ohne Web Audio ---');
   pruefe('ohne AudioContext bleibt der Ton stumm', a.klang.bereit === false);
   pruefe('Ton-Button ist trotzdem nicht als aktiv markiert',
          a.el['btn-ton'].classList.contains('aktiv') === false);
   a.el['btn-ton'].klick();
   pruefe('Klick darauf wirft nichts um', a.dq.laeuft() === false);
 
-  console.log('
---- Klang mit Web Audio ---');
+  console.log('\n--- Klang mit Web Audio ---');
   const c = aufbauen(vonPlatte, { AudioContext: audioAttrappe() });
   await c.auf.laden();
   await new Promise(r => setTimeout(r, 0));
