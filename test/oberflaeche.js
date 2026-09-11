@@ -15,7 +15,23 @@ const WURZEL = path.join(__dirname, '..');
 
 const IDS = ['btn-los', 'startbildschirm', 'pulsanzeige', 'bedienleiste',
              'btn-startstopp', 'btn-ruhe', 'btn-anspannung', 'btn-live',
-             'live-status'];
+             'live-status', 'btn-ton'];
+
+// Gerade so viel Web Audio, wie js/klang.js benutzt. Damit laesst sich
+// pruefen, ob der Ton dem Atemzug folgt, ohne etwas hoerbar zu machen.
+function audioAttrappe() {
+  return function () {
+    const wert = v => ({ value: v });
+    return {
+      destination: {},
+      createBiquadFilter: () => ({ type: '', frequency: wert(0), Q: wert(0),
+                                   connect() {} }),
+      createGain:         () => ({ gain: wert(0), connect() {} }),
+      createOscillator:   () => ({ type: '', frequency: wert(0),
+                                   connect() {}, start() {} })
+    };
+  };
+}
 
 // Gerade so viel DOM, wie js/ui.js benutzt.
 function macheElement(id) {
@@ -52,7 +68,7 @@ function macheElement(id) {
 }
 
 // Baut eine vollstaendige Umgebung: DOM-Ersatz, fetch, Zeitgeber.
-function aufbauen(fetchImpl) {
+function aufbauen(fetchImpl, fensterStub) {
   const el = {};
   IDS.forEach(id => { el[id] = macheElement(id); });
 
@@ -65,11 +81,12 @@ function aufbauen(fetchImpl) {
     document: { getElementById: id => el[id] || null },
     setInterval: fn => { intervallFn = fn; return 1; },
     setTimeout,
-    fetch: fetchImpl
+    fetch: fetchImpl,
+    window: fensterStub || {}      // ohne AudioContext bleibt der Ton stumm
   });
 
   for (const datei of ['js/datenquelle.js', 'js/simulation.js',
-                       'js/aufzeichnung.js', 'js/ui.js']) {
+                       'js/aufzeichnung.js', 'js/klang.js', 'js/ui.js']) {
     vm.runInContext(fs.readFileSync(path.join(WURZEL, datei), 'utf8'), ctx,
                     { filename: datei });
   }
@@ -78,6 +95,7 @@ function aufbauen(fetchImpl) {
     el,
     dq: vm.runInContext('datenquelle', ctx),
     auf: vm.runInContext('aufzeichnung', ctx),
+    klang: vm.runInContext('klang', ctx),
     tick: () => { if (intervallFn) intervallFn(); }
   };
 }
@@ -106,7 +124,7 @@ function pruefe(name, bedingung, zusatz) {
   const a = aufbauen(vonPlatte);
 
   for (const id of ['btn-los', 'btn-startstopp', 'btn-ruhe',
-                    'btn-anspannung', 'btn-live', 'live-status']) {
+                    'btn-anspannung', 'btn-live', 'live-status', 'btn-ton']) {
     pruefe('#' + id + ' hat genau einen Klick-Listener',
            a.el[id].anzahlListener() === 1);
   }
@@ -203,6 +221,58 @@ function pruefe(name, bedingung, zusatz) {
   pruefe('Klick wechselt nicht auf die kaputte Quelle',
          b.dq.name === 'simulation');
   pruefe('Ruhe bleibt bedienbar', b.el['btn-ruhe'].disabled === false);
+
+  console.log('
+--- Klang ohne Web Audio ---');
+  pruefe('ohne AudioContext bleibt der Ton stumm', a.klang.bereit === false);
+  pruefe('Ton-Button ist trotzdem nicht als aktiv markiert',
+         a.el['btn-ton'].classList.contains('aktiv') === false);
+  a.el['btn-ton'].klick();
+  pruefe('Klick darauf wirft nichts um', a.dq.laeuft() === false);
+
+  console.log('
+--- Klang mit Web Audio ---');
+  const c = aufbauen(vonPlatte, { AudioContext: audioAttrappe() });
+  await c.auf.laden();
+  await new Promise(r => setTimeout(r, 0));
+
+  c.el['btn-los'].klick();        // diese Geste baut den Klang auf
+  pruefe('Klang wird beim Start aufgebaut', c.klang.bereit === true);
+  pruefe('Ton-Button ist als aktiv markiert',
+         c.el['btn-ton'].classList.contains('aktiv') === true);
+
+  // Einatmen: Lautstaerke und Filter steigen
+  for (let i = 0; i < 200; i++) c.klang.setzen(1, 0.5, true);
+  const lautEin   = c.klang.meister.gain.value;
+  const filterEin = c.klang.filter.frequency.value;
+  pruefe('beim Einatmen wird es lauter', lautEin > 0.1, lautEin.toFixed(3));
+
+  // Ausatmen: beides geht zurueck
+  for (let i = 0; i < 200; i++) c.klang.setzen(0, 0.5, true);
+  pruefe('beim Ausatmen wird es leiser',
+         c.klang.meister.gain.value < lautEin,
+         c.klang.meister.gain.value.toFixed(3));
+  pruefe('Filter oeffnet sich nur beim Einatmen',
+         c.klang.filter.frequency.value < filterEin);
+
+  // Anspannung hebt die Tonhoehe
+  c.klang.setzen(0.5, 0, true);
+  const tiefer = c.klang.oszA.frequency.value;
+  c.klang.setzen(0.5, 1, true);
+  pruefe('Anspannung hebt die Tonhoehe',
+         c.klang.oszA.frequency.value > tiefer,
+         tiefer.toFixed(1) + ' -> ' + c.klang.oszA.frequency.value.toFixed(1) + ' Hz');
+
+  c.el['btn-ton'].klick();
+  for (let i = 0; i < 400; i++) c.klang.setzen(1, 0.5, true);
+  pruefe('abgeschaltet wird es still',
+         c.klang.meister.gain.value < 0.001,
+         c.klang.meister.gain.value.toFixed(5));
+
+  c.el['btn-ton'].klick();
+  for (let i = 0; i < 400; i++) c.klang.setzen(1, 0.5, false);
+  pruefe('bei angehaltener Wiedergabe ebenfalls still',
+         c.klang.meister.gain.value < 0.001);
 
   console.log(fehlgeschlagen === 0
     ? '\nAlle Pruefungen bestanden.\n'
