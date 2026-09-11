@@ -24,6 +24,8 @@ function audioAttrappe() {
     const wert = v => ({ value: v });
     return {
       destination: {},
+      state: 'running',
+      resume: () => Promise.resolve(),
       createBiquadFilter: () => ({ type: '', frequency: wert(0), Q: wert(0),
                                    connect() {} }),
       createGain:         () => ({ gain: wert(0), connect() {} }),

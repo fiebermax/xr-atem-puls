@@ -132,9 +132,8 @@
       <button id="btn-ton">Ton</button>
     </div>
 
-    <!-- XR-Szene. atem-klang haengt am Szenenwurzelelement, weil der Ton
-         nicht aus einer Richtung kommt, sondern den ganzen Raum fuellt. -->
-    <a-scene atem-klang>
+    <!-- XR-Szene -->
+    <a-scene>
       <a-assets>
         <a-asset-item id="lunge" src="models/lunge.glb"></a-asset-item>
       </a-assets>
@@ -164,7 +163,7 @@
               atem-ring></a-ring>
 
       <!-- Aeusserer Container wird skaliert, inneres Modell wird zentriert -->
-      <a-entity id="lungenmodell" position="0 1.5 -2" atmung>
+      <a-entity id="lungenmodell" position="0 1.5 -2" atmung atem-klang>
         <a-entity id="lunge-inner"
                   gltf-model="#lunge"
                   modell-fix="zielhoehe: 1.47"></a-entity>

@@ -13,9 +13,17 @@
 // Ausatmen geht beides zurueck. Mit steigender Anspannung hebt sich die
 // Tonhoehe leicht an.
 
-const GRUNDTON    = 110;    // Hz, tiefes A
+// 220 Hz statt der tieferen Oktave: eingebaute Laptoplautsprecher geben
+// unterhalb von rund 200 Hz kaum noch etwas her, und ein reiner Sinus hat
+// keine Obertoene, ueber die sie die Tonhoehe sonst noch andeuten koennten.
+const GRUNDTON    = 220;    // Hz, A3
 const SCHWEBUNG   = 1.004;  // Verstimmung des zweiten Oszillators
-const LAUTSTAERKE = 0.14;   // Obergrenze, bewusst leise
+const LAUTSTAERKE = 0.22;   // Obergrenze
+
+// Dreieck statt Sinus, aus demselben Grund: die ungeraden Obertoene machen
+// den Ton auf kleinen Lautsprechern ueberhaupt erst hoerbar. Der Tiefpass
+// nimmt ihnen danach die Schaerfe wieder.
+const WELLENFORM  = 'triangle';
 
 const klang = {
   ctx: null,
@@ -38,7 +46,7 @@ const klang = {
       // beim Einatmen ein Stueck weit.
       this.filter = this.ctx.createBiquadFilter();
       this.filter.type = 'lowpass';
-      this.filter.frequency.value = 300;
+      this.filter.frequency.value = 500;
       this.filter.Q.value = 0.7;
 
       this.meister = this.ctx.createGain();
@@ -46,7 +54,7 @@ const klang = {
 
       this.oszA = this.ctx.createOscillator();
       this.oszB = this.ctx.createOscillator();
-      this.oszA.type = this.oszB.type = 'sine';
+      this.oszA.type = this.oszB.type = WELLENFORM;
       this.oszA.frequency.value = GRUNDTON;
       this.oszB.frequency.value = GRUNDTON * SCHWEBUNG;
 
@@ -57,8 +65,18 @@ const klang = {
 
       this.oszA.start();
       this.oszB.start();
-
       this.bereit = true;
+
+      // Ein frisch erzeugter AudioContext kann trotz Nutzergeste im Zustand
+      // "suspended" starten. Dann laeuft alles korrekt, es kommt nur nichts
+      // aus den Lautsprechern - und zwar ohne jede Fehlermeldung. Deshalb
+      // immer aufwecken und den Zustand melden.
+      if (typeof this.ctx.resume === 'function') {
+        this.ctx.resume().then(
+          () => console.log('Klang bereit, AudioContext:', this.ctx.state),
+          f  => console.warn('AudioContext liess sich nicht starten:', f)
+        );
+      }
     } catch (fehler) {
       // Kein Ton ist kein Grund, die Anwendung anzuhalten.
       console.warn('Klang nicht verfuegbar:', fehler.message);
@@ -89,7 +107,7 @@ const klang = {
     this.meister.gain.value += (ziel - this.meister.gain.value) * 0.08;
 
     // Filter oeffnet sich mit dem Einatmen
-    this.filter.frequency.value = 300 + atemwert * 420;
+    this.filter.frequency.value = 500 + atemwert * 1300;
 
     // Anspannung hebt die Tonhoehe um knapp einen Ganzton an
     const hoehe = GRUNDTON * (1 + anteil * 0.12);
@@ -101,18 +119,17 @@ const klang = {
 // Die Ankopplung an die Szene. Nur registrieren, wenn A-Frame da ist -
 // der Test in test/oberflaeche.js laedt diese Datei ohne Szene.
 if (typeof AFRAME !== 'undefined') {
+  // Gehoert auf dieselbe Entity wie atmung. Dann liegt der Atemwert direkt
+  // nebenan und muss nicht gesucht werden - und es ist sichergestellt, dass
+  // tick ueberhaupt laeuft, denn atmung tickt auf dieser Entity ja bereits.
   AFRAME.registerComponent('atem-klang', {
     tick: function () {
       if (!klang.bereit) return;
 
-      // Die atmung-Component einmal suchen und merken, wie in atem-echo.js.
-      if (!this.atmung) {
-        const traeger = this.el.sceneEl.querySelector('[atmung]');
-        if (!traeger || !traeger.components.atmung) return;
-        this.atmung = traeger.components.atmung;
-      }
+      const atmung = this.el.components.atmung;
+      if (!atmung) return;
 
-      klang.setzen(this.atmung.atemwert, datenquelle.anteil(), datenquelle.laeuft());
+      klang.setzen(atmung.atemwert, datenquelle.anteil(), datenquelle.laeuft());
     }
   });
 }
